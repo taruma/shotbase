@@ -318,6 +318,17 @@ async function checkForProject() {
 }
 
 function showSetupScreen() {
+    // Hide TOC panel when leaving project
+    const toc = document.getElementById('shot-toc');
+    if (toc) {
+        toc.style.display = 'none';
+        toc.classList.remove('open');
+    }
+    const tocToggle = document.getElementById('toc-toggle');
+    if (tocToggle) {
+        tocToggle.setAttribute('aria-expanded', 'false');
+    }
+
     document.getElementById('setup-screen').style.display = 'flex';
     document.getElementById('main-interface').style.display = 'none';
     loadRecentProjects();
