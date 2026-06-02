@@ -9,7 +9,7 @@
 <p align="center">
   <strong>Your AI Filmmaking Asset Manager.</strong>
   <br />
-  An open-source tool designed to manage, organize, and streamline your entire AI-driven image-to-video workflow.
+  An open-source tool designed to manage, organize, and streamline your entire AI filmmaking asset workflow.
 </p>
 
 <p align="center">

@@ -14,7 +14,7 @@
 ---
 
 ## Project Overview
-ShotBase is an application for managing AI-driven image-to-video filmmaking workflows. It supports structured organization, versioning, and annotation of generated stills and videos. The application provides a web interface for creating, managing, and organizing shots with drag-and-drop functionality.
+ShotBase is an application for managing AI-generated media assets including images, videos, prompts, and project notes. It supports structured organization, versioning, and annotation of generated stills and videos. The application provides a web interface for creating, managing, and organizing shots with drag-and-drop functionality.
 
 Key features include:
 - Shot management with versioned stills and videos
