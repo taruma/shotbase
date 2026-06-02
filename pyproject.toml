@@ -21,9 +21,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/taruma/shotbuddy"
-Repository = "https://github.com/taruma/shotbuddy"
-Issues = "https://github.com/taruma/shotbuddy/issues"
+Homepage = "https://github.com/taruma/shotbase"
+Repository = "https://github.com/taruma/shotbase"
+Issues = "https://github.com/taruma/shotbase/issues"
 
 [tool.uv]
 package = false

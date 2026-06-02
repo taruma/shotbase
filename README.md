@@ -72,7 +72,7 @@ Get started with ShotBase in just a few steps. Using `uv` is recommended for its
     *(We use a shallow clone to download faster)*
     ```bash
     git clone --depth 1 https://github.com/taruma/shotbase.git
-    cd shotbuddy
+    cd shotbase
     ```
 
 2.  **Install Dependencies**
