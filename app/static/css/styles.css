@@ -374,6 +374,14 @@ body.light {
 }
 
 /* Light Theme Overrides for TOC */
+.light .toc-archived-header {
+    color: #777;
+}
+
+.light .toc-archived-header:hover {
+    color: #000;
+}
+
 .light .shot-toc {
     background: #ffffff;
     border: 1px solid #ddd;

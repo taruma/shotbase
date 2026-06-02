@@ -535,13 +535,23 @@ function renderTOC() {
     if (archivedShots.length > 0) {
         const archivedSection = document.createElement('div');
         archivedSection.className = 'toc-section';
-        archivedSection.innerHTML = `
-                    <div class="toc-section-title">Archived Shots (${archivedShots.length})</div>
-                    <ul class="toc-list" id="toc-archived-list"></ul>
-                `;
-        toc.appendChild(archivedSection);
 
-        const archivedList = document.getElementById('toc-archived-list');
+        const isTocArchivedOpen = localStorage.getItem('tocArchivedOpen') === 'true';
+
+        const archivedHeader = document.createElement('button');
+        archivedHeader.className = 'toc-archived-header';
+        archivedHeader.innerHTML = `
+            <span class="chevron" aria-hidden="true">${isTocArchivedOpen ? '▾' : '▸'}</span>
+            <span>Archived Shots</span>
+            <span class="count">(${archivedShots.length})</span>
+        `;
+        archivedHeader.addEventListener('click', toggleTocArchivedSection);
+
+        const archivedList = document.createElement('ul');
+        archivedList.className = 'toc-list';
+        archivedList.id = 'toc-archived-list';
+        archivedList.style.display = isTocArchivedOpen ? 'block' : 'none';
+
         archivedShots.forEach(shot => {
             const item = document.createElement('li');
             item.className = 'toc-item archived';
@@ -552,6 +562,10 @@ function renderTOC() {
             item.addEventListener('click', () => scrollToShot(shot.name));
             archivedList.appendChild(item);
         });
+
+        archivedSection.appendChild(archivedHeader);
+        archivedSection.appendChild(archivedList);
+        toc.appendChild(archivedSection);
     }
 
     // Set up IntersectionObserver to highlight active item
@@ -732,6 +746,19 @@ function renderShots() {
 
     // Reinitialize tooltips after rendering
     setTimeout(initTooltips, 100);
+}
+
+function toggleTocArchivedSection() {
+    const archivedHeader = this;
+    const archivedList = document.getElementById('toc-archived-list');
+    const chevron = archivedHeader.querySelector('.chevron');
+
+    const isOpen = archivedList.style.display !== 'none';
+    archivedList.style.display = isOpen ? 'none' : 'block';
+    chevron.textContent = isOpen ? '▸' : '▾';
+
+    // Persist state to localStorage
+    localStorage.setItem('tocArchivedOpen', isOpen ? 'false' : 'true');
 }
 
 function toggleArchivedSection() {

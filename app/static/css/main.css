@@ -911,6 +911,39 @@ body {
     display: block;
 }
 
+/* TOC collapsible archived header */
+.toc-archived-header {
+    width: 100%;
+    background: transparent;
+    color: #b5b5b5;
+    font-size: 13px;
+    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 0;
+    cursor: pointer;
+    text-align: left;
+    text-transform: uppercase;
+    transition: color 0.2s;
+}
+
+.toc-archived-header:hover {
+    color: #e5e5e5;
+}
+
+.toc-archived-header .chevron {
+    font-size: 12px;
+    width: 16px;
+    text-align: center;
+}
+
+.toc-archived-header .count {
+    margin-left: 6px;
+    opacity: 0.8;
+    font-size: 12px;
+}
+
 .shot-name .archive-btn {
     margin-left: auto;
     padding: 6px 10px;
