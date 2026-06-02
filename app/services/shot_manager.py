@@ -1145,27 +1145,28 @@ class ShotManager:
 
             for order, shot in enumerate(non_archived_shots, start=1):
                 shot_name = shot['name']
+                display_name = shot['display_name'] or ''
                 info = self.get_shot_info(shot_name)
 
                 # First Frame
                 if ('images' in export_type or export_type == 'all') and (info['first_image']['caption'] or info['first_image']['prompt']):
-                    first_data.append((order, shot_name, info['first_image']['caption'], info['first_image']['prompt']))
+                    first_data.append((order, shot_name, display_name, info['first_image']['caption'], info['first_image']['prompt']))
 
                 # Last Frame
                 if ('images' in export_type or export_type == 'all') and (info['last_image']['caption'] or info['last_image']['prompt']):
-                    last_data.append((order, shot_name, info['last_image']['caption'], info['last_image']['prompt']))
+                    last_data.append((order, shot_name, display_name, info['last_image']['caption'], info['last_image']['prompt']))
 
                 # Video
                 if ('videos' in export_type or export_type == 'all') and (info['video']['caption'] or info['video']['prompt']):
-                    video_data.append((order, shot_name, info['video']['caption'], info['video']['prompt']))
+                    video_data.append((order, shot_name, display_name, info['video']['caption'], info['video']['prompt']))
 
                 # Alt Video
                 if ('videos' in export_type or export_type == 'all') and (info['alt_video']['caption'] or info['alt_video']['prompt']):
-                    alt_video_data.append((order, shot_name, info['alt_video']['caption'], info['alt_video']['prompt']))
+                    alt_video_data.append((order, shot_name, display_name, info['alt_video']['caption'], info['alt_video']['prompt']))
 
                 # Notes
                 if info['notes'].strip():
-                    notes_list.append((order, shot_name, info['notes']))
+                    notes_list.append((order, shot_name, display_name, info['notes']))
 
             # Build MD content
             md_lines = [
@@ -1195,55 +1196,55 @@ class ShotManager:
             if first_data:
                 md_lines.extend([
                     "## First Frame",
-                    "| Order | Shot Name | Captions | Prompts |",
-                    "|-------|-----------|----------|---------|"
+                    "| Order | Shot Name | Display Name | Captions | Prompts |",
+                    "|-------|-----------|--------------|----------|---------|"
                 ])
-                for order, name, caption, prompt in first_data:
-                    md_lines.append(f"| {order:03d} | {name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+                for order, name, display_name, caption, prompt in first_data:
+                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
                 md_lines.append("")
 
             # Last Frame table
             if last_data:
                 md_lines.extend([
                     "## Last Frame",
-                    "| Order | Shot Name | Captions | Prompts |",
-                    "|-------|-----------|----------|---------|"
+                    "| Order | Shot Name | Display Name | Captions | Prompts |",
+                    "|-------|-----------|--------------|----------|---------|"
                 ])
-                for order, name, caption, prompt in last_data:
-                    md_lines.append(f"| {order:03d} | {name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+                for order, name, display_name, caption, prompt in last_data:
+                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
                 md_lines.append("")
 
             # Video table
             if video_data:
                 md_lines.extend([
                     "## Video",
-                    "| Order | Shot Name | Captions | Prompts |",
-                    "|-------|-----------|----------|---------|"
+                    "| Order | Shot Name | Display Name | Captions | Prompts |",
+                    "|-------|-----------|--------------|----------|---------|"
                 ])
-                for order, name, caption, prompt in video_data:
-                    md_lines.append(f"| {order:03d} | {name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+                for order, name, display_name, caption, prompt in video_data:
+                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
                 md_lines.append("")
 
             # Alt Video table
             if alt_video_data:
                 md_lines.extend([
                     "## Alt Video",
-                    "| Order | Shot Name | Captions | Prompts |",
-                    "|-------|-----------|----------|---------|"
+                    "| Order | Shot Name | Display Name | Captions | Prompts |",
+                    "|-------|-----------|--------------|----------|---------|"
                 ])
-                for order, name, caption, prompt in alt_video_data:
-                    md_lines.append(f"| {order:03d} | {name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+                for order, name, display_name, caption, prompt in alt_video_data:
+                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
                 md_lines.append("")
 
             # Notes table
             if notes_list:
                 md_lines.extend([
                     "## Notes",
-                    "| Order | Shot Name | Notes |",
-                    "|-------|-----------|-------|"
+                    "| Order | Shot Name | Display Name | Notes |",
+                    "|-------|-----------|--------------|-------|"
                 ])
-                for order, name, notes in notes_list:
-                    md_lines.append(f"| {order:03d} | {name} | {notes.replace('|', '\\|').replace('\n', '<br>')} |")
+                for order, name, display_name, notes in notes_list:
+                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {notes.replace('|', '\\|').replace('\n', '<br>')} |")
                 md_lines.append("")
 
             # Write MD file
