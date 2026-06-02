@@ -52,8 +52,9 @@ def get_recent_projects():
             shots_dir = p / 'shots'
             if shots_dir.exists():
                 created = datetime.fromtimestamp(p.stat().st_ctime).isoformat()
+                project_info = project_manager.load_project_info(project_path)
                 recent_projects.append({
-                    "name": p.name,
+                    "name": project_info.get('title', p.name),
                     "path": str(p.resolve()),
                     "created": created,
                     "shots": []
