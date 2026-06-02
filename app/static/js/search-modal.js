@@ -292,10 +292,15 @@ function highlightSnippet(text, query) {
         windowStart = originalWindowStart;
     }
     var windowEnd = Math.min(escaped.length, firstMatch + CONTEXT + (ranges[0].end - ranges[0].start));
-    // Extend to include nearby matches
+    // Extend to include nearby matches, but cap total window at 300 chars
+    var MAX_SNIPPET = 300;
     for (var i = 1; i < ranges.length; i++) {
         if (ranges[i].start < windowEnd + CONTEXT) {
             windowEnd = Math.min(escaped.length, ranges[i].end + CONTEXT);
+            if (windowEnd - windowStart > MAX_SNIPPET) {
+                windowEnd = windowStart + MAX_SNIPPET;
+                break;
+            }
         } else {
             break;
         }
