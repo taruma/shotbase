@@ -7,7 +7,11 @@
 .search-button {
     background: linear-gradient(135deg, #f0a040, #d4880f);
     border: 1px solid #c0780a;
+    border-radius: 6px;
     color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
 }
 
 .search-button:hover {
@@ -52,6 +56,55 @@
 
 .search-input::placeholder {
     color: #777;
+}
+
+/* --- Filter Pills Row --- */
+.search-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.search-filter-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-right: 2px;
+}
+
+.search-filter-sep {
+    width: 1px;
+    height: 20px;
+    background: #444;
+    margin: 0 6px;
+}
+
+.search-filter-pill {
+    padding: 4px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    border: 1px solid #444;
+    border-radius: 14px;
+    background: transparent;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.search-filter-pill:hover {
+    border-color: #666;
+    color: #ccc;
+}
+
+.search-filter-pill.active {
+    background: rgba(240, 160, 64, 0.2);
+    border-color: #f0a040;
+    color: #f0a040;
 }
 
 /* --- Results Area --- */
@@ -151,6 +204,12 @@
 
 .search-match-item:hover {
     background: #252525;
+}
+
+.search-clickable.keyboard-focus {
+    outline: none;
+    background: rgba(240, 160, 64, 0.15);
+    border-left: 3px solid #f0a040;
 }
 
 .search-match-badge {
@@ -254,6 +313,30 @@ body.light-theme .search-input::placeholder {
     color: #999;
 }
 
+body.light-theme .search-filter-label {
+    color: #999;
+}
+
+body.light-theme .search-filter-sep {
+    background: #ccc;
+}
+
+body.light-theme .search-filter-pill {
+    border-color: #ccc;
+    color: #888;
+}
+
+body.light-theme .search-filter-pill:hover {
+    border-color: #aaa;
+    color: #555;
+}
+
+body.light-theme .search-filter-pill.active {
+    background: rgba(240, 160, 64, 0.15);
+    border-color: #d4880f;
+    color: #c0780a;
+}
+
 body.light-theme .search-shot-group {
     background: #f9f9f9;
     border-color: #e0e0e0;
@@ -287,6 +370,11 @@ body.light-theme .search-match-item {
 
 body.light-theme .search-match-item:hover {
     background: #f0f0f0;
+}
+
+body.light-theme .search-clickable.keyboard-focus {
+    background: rgba(240, 160, 64, 0.12);
+    border-left-color: #d4880f;
 }
 
 body.light-theme .search-snippet {

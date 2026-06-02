@@ -218,6 +218,18 @@
                 <button class="close-modal" onclick="closeSearchModal()">&times;</button>
             </div>
             <input id="search-input" type="text" class="search-input" placeholder="Search prompts, captions, notes..." autocomplete="off" />
+            <div class="search-filter-row">
+                <span class="search-filter-label">Content:</span>
+                <button class="search-filter-pill active" data-content-filter="all" onclick="setContentFilter('all', this)">All</button>
+                <button class="search-filter-pill" data-content-filter="prompt" onclick="setContentFilter('prompt', this)">Prompts</button>
+                <button class="search-filter-pill" data-content-filter="caption" onclick="setContentFilter('caption', this)">Captions</button>
+                <button class="search-filter-pill" data-content-filter="notes" onclick="setContentFilter('notes', this)">Notes</button>
+                <span class="search-filter-sep"></span>
+                <span class="search-filter-label">Shots:</span>
+                <button class="search-filter-pill active" data-archive-filter="all" onclick="setArchiveFilter('all', this)">All Shots</button>
+                <button class="search-filter-pill" data-archive-filter="active" onclick="setArchiveFilter('active', this)">Active</button>
+                <button class="search-filter-pill" data-archive-filter="archived" onclick="setArchiveFilter('archived', this)">Archived</button>
+            </div>
             <div id="search-results" class="search-results">
                 <p class="search-placeholder">Type to search across all shots...</p>
             </div>

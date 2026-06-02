@@ -5,6 +5,11 @@
 
 let searchIndex = [];
 let searchDebounceTimer = null;
+let searchFocusedIndex = -1;  // Track keyboard-focused result item
+
+// Filter state
+let searchContentFilter = 'all';   // 'all', 'prompt', 'caption', 'notes'
+let searchArchiveFilter = 'all';  // 'all', 'active', 'archived'
 
 // ============================================================
 // Build in-memory search index from the global shots array
@@ -19,6 +24,7 @@ function buildSearchIndex() {
 
     shots.forEach(function (shot) {
         var items = [];
+        var isArchived = !!shot.archived;
 
         // First Image: prompt + caption
         if (shot.first_image) {
@@ -60,6 +66,7 @@ function buildSearchIndex() {
             searchIndex.push({
                 shotName: shot.name,
                 displayName: shot.display_name || '',
+                archived: isArchived,
                 items: items
             });
         }
@@ -97,9 +104,63 @@ function closeSearchModal() {
     var input = document.getElementById('search-input');
     if (input) input.value = '';
 
+    // Reset filters to defaults
+    searchContentFilter = 'all';
+    searchArchiveFilter = 'all';
+
+    resetFilterPills();
+
     if (searchDebounceTimer) {
         clearTimeout(searchDebounceTimer);
         searchDebounceTimer = null;
+    }
+}
+
+// ============================================================
+// Filter pill controls
+// ============================================================
+function setContentFilter(type, btn) {
+    searchContentFilter = type;
+    // Update active state on content filter pills
+    var pills = document.querySelectorAll('#search-modal .search-filter-pill[data-content-filter]');
+    for (var i = 0; i < pills.length; i++) {
+        pills[i].classList.remove('active');
+    }
+    if (btn) btn.classList.add('active');
+    // Re-run search
+    triggerSearchRefresh();
+}
+
+function setArchiveFilter(type, btn) {
+    searchArchiveFilter = type;
+    // Update active state on archive filter pills
+    var pills = document.querySelectorAll('#search-modal .search-filter-pill[data-archive-filter]');
+    for (var i = 0; i < pills.length; i++) {
+        pills[i].classList.remove('active');
+    }
+    if (btn) btn.classList.add('active');
+    // Re-run search
+    triggerSearchRefresh();
+}
+
+function resetFilterPills() {
+    // Content: set 'all' active
+    var contentPills = document.querySelectorAll('#search-modal .search-filter-pill[data-content-filter]');
+    for (var i = 0; i < contentPills.length; i++) {
+        contentPills[i].classList.toggle('active', contentPills[i].getAttribute('data-content-filter') === 'all');
+    }
+    // Archive: set 'all' active
+    var archivePills = document.querySelectorAll('#search-modal .search-filter-pill[data-archive-filter]');
+    for (var i = 0; i < archivePills.length; i++) {
+        archivePills[i].classList.toggle('active', archivePills[i].getAttribute('data-archive-filter') === 'all');
+    }
+}
+
+function triggerSearchRefresh() {
+    var input = document.getElementById('search-input');
+    if (input) {
+        var data = performSearch(input.value);
+        renderSearchResults(data);
     }
 }
 
@@ -122,7 +183,16 @@ function performSearch(query) {
     searchIndex.forEach(function (entry) {
         var matches = [];
 
+        // Apply archive filter
+        if (searchArchiveFilter === 'active' && entry.archived) return;
+        if (searchArchiveFilter === 'archived' && !entry.archived) return;
+
         entry.items.forEach(function (item) {
+            // Apply content type filter
+            if (searchContentFilter === 'prompt' && item.badgeType !== 'prompt') return;
+            if (searchContentFilter === 'caption' && item.badgeType !== 'caption') return;
+            if (searchContentFilter === 'notes' && item.badgeType !== 'notes-badge') return;
+
             var text = item.text || '';
             var lowerText = text.toLowerCase();
 
@@ -217,6 +287,32 @@ function safeEscape(str) {
 }
 
 // ============================================================
+// Keyboard navigation focus helper
+// ============================================================
+function updateSearchFocus(items, newIndex) {
+    // Remove current focus
+    for (var i = 0; i < items.length; i++) {
+        items[i].classList.remove('keyboard-focus');
+    }
+
+    // Clamp to valid range
+    if (newIndex < 0) {
+        newIndex = items.length - 1;
+    } else if (newIndex >= items.length) {
+        newIndex = 0;
+    }
+
+    searchFocusedIndex = newIndex;
+
+    // Apply focus to target
+    if (newIndex >= 0 && newIndex < items.length) {
+        items[newIndex].classList.add('keyboard-focus');
+        // Scroll the focused item into view within the results container
+        items[newIndex].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+}
+
+// ============================================================
 // Render results
 // ============================================================
 function renderSearchResults(data) {
@@ -247,6 +343,9 @@ function renderSearchResults(data) {
             ' across ' + results.length + ' shot' + (results.length !== 1 ? 's' : '');
     }
 
+    // Reset keyboard focus when new results are rendered
+    searchFocusedIndex = -1;
+
     // Build HTML
     var html = '<ul class="search-results-list">';
 
@@ -256,7 +355,7 @@ function renderSearchResults(data) {
             : '';
 
         html += '<li class="search-shot-group">';
-        html += '<div class="search-shot-header" onclick="scrollToShot(\'' + safeEscape(shotResult.shotName).replace(/'/g, "\\'") + '\'); closeSearchModal();">';
+        html += '<div class="search-shot-header search-clickable" onclick="scrollToShot(\'' + safeEscape(shotResult.shotName).replace(/'/g, "\\'") + '\'); closeSearchModal();">';
         html += '<span class="search-shot-name">' + safeEscape(shotResult.shotName) + '</span>';
         html += displayPart;
         html += '<span class="search-match-count">' + shotResult.matchCount + ' match' + (shotResult.matchCount !== 1 ? 'es' : '') + '</span>';
@@ -266,7 +365,7 @@ function renderSearchResults(data) {
         shotResult.matches.forEach(function (match) {
             var labelSuffix = match.assetLabel ? ' <span class="asset-label">(' + safeEscape(match.assetLabel) + ')</span>' : '';
 
-            html += '<li class="search-match-item" onclick="scrollToShot(\'' + safeEscape(shotResult.shotName).replace(/'/g, "\\'") + '\'); closeSearchModal();">';
+            html += '<li class="search-match-item search-clickable" onclick="scrollToShot(\'' + safeEscape(shotResult.shotName).replace(/'/g, "\\'") + '\'); closeSearchModal();">';
             html += '<div class="search-match-badge ' + match.badgeType + '">' + safeEscape(match.field) + labelSuffix + '</div>';
             html += '<div class="search-snippet">' + highlightSnippet(match.text, query) + '</div>';
             html += '</li>';
@@ -345,6 +444,28 @@ document.addEventListener('DOMContentLoaded', function () {
         input.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 closeSearchModal();
+                return;
+            }
+
+            // Keyboard navigation: ArrowDown / ArrowUp / Enter
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter') {
+                var items = document.querySelectorAll('#search-results .search-clickable');
+                if (items.length === 0) return;
+
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    updateSearchFocus(items, searchFocusedIndex + 1);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    // If nothing is focused, select the last item
+                    var nextIdx = searchFocusedIndex >= 0 ? searchFocusedIndex - 1 : items.length - 1;
+                    updateSearchFocus(items, nextIdx);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (searchFocusedIndex >= 0 && searchFocusedIndex < items.length) {
+                        items[searchFocusedIndex].click();
+                    }
+                }
             }
         });
     }
