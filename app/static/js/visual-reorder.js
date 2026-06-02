@@ -137,6 +137,7 @@ function openVisualReorderModal() {
     // Ensure preview toggle button exists
     ensurePreviewToggleBtn();
 
+    document.body.style.overflow = 'hidden';
     document.getElementById('visual-reorder-modal').style.display = 'flex';
 }
 
@@ -274,6 +275,8 @@ function closeVisualReorderModal() {
     restoreNavigationOverrides();
     var grid = document.getElementById('visual-reorder-grid');
     if (grid) grid.classList.remove('preview-mode');
+    // Restore body scroll
+    document.body.style.overflow = '';
 }
 
 function saveVisualReorder() {
