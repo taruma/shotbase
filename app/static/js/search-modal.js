@@ -249,8 +249,7 @@ function highlightSnippet(text, query) {
     var ranges = [];
 
     tokens.forEach(function (token) {
-        var tokenEscaped = safeEscape(token);
-        var tokenLower = tokenEscaped.toLowerCase();
+        var tokenLower = token.toLowerCase();
         var idx = 0;
         while (true) {
             idx = lower.indexOf(tokenLower, idx);
@@ -258,13 +257,13 @@ function highlightSnippet(text, query) {
             // Avoid overlapping highlights
             var overlap = false;
             for (var r = 0; r < ranges.length; r++) {
-                if (idx < ranges[r].end && idx + tokenEscaped.length > ranges[r].start) {
+                if (idx < ranges[r].end && idx + token.length > ranges[r].start) {
                     overlap = true;
                     break;
                 }
             }
             if (!overlap) {
-                ranges.push({ start: idx, end: idx + tokenEscaped.length });
+                ranges.push({ start: idx, end: idx + token.length });
             }
             idx++;
         }
@@ -282,9 +281,15 @@ function highlightSnippet(text, query) {
     var CONTEXT = 100;  // characters of context before/after the match
     var firstMatch = ranges[0].start;
     var windowStart = Math.max(0, firstMatch - CONTEXT);
-    // Try to start at a word boundary (space or newline)
-    while (windowStart > 0 && escaped.charAt(windowStart) !== ' ' && escaped.charAt(windowStart) !== '\n') {
+    // Try to start at a word boundary (space or newline), cap backtrack to 40 chars
+    var originalWindowStart = windowStart;
+    var scanLimit = Math.max(0, windowStart - 40);
+    while (windowStart > scanLimit && escaped.charAt(windowStart) !== ' ' && escaped.charAt(windowStart) !== '\n') {
         windowStart--;
+    }
+    // If no word boundary found in scan range, revert to original position
+    if (windowStart <= scanLimit && escaped.charAt(windowStart) !== ' ' && escaped.charAt(windowStart) !== '\n') {
+        windowStart = originalWindowStart;
     }
     var windowEnd = Math.min(escaped.length, firstMatch + CONTEXT + (ranges[0].end - ranges[0].start));
     // Extend to include nearby matches
