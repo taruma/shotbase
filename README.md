@@ -1,8 +1,10 @@
 <div align="center">
-  <img src="./logo_shotbuddyv3.png" alt="Shotbuddy Logo" width="100"/>
+  <img src="./logo_shotbuddyv3.png" alt="ShotBase Logo" width="100"/>
 </div>
 
-<h1 align="center">SHOTBUDDY v3</h1>
+<h1 align="center">ShotBase</h1>
+
+<h3 align="center">(previously ShotBuddy V3)</h3>
 
 <p align="center">
   <strong>Your AI Filmmaking Asset Manager.</strong>
@@ -18,15 +20,15 @@
 
 ---
 
-Shotbuddy takes the chaos out of AI filmmaking. Instead of juggling countless generated files in messy folders, Shotbuddy provides a structured, visual, and intuitive interface to build your stories shot by shot. This fork supercharges the original with powerful project management, advanced version control, and a modern user experience tailored for today's creative workflows.
+ShotBase takes the chaos out of AI filmmaking. Instead of juggling countless generated files in messy folders, ShotBase provides a structured, visual, and intuitive interface to build your stories shot by shot. This fork supercharges the original with powerful project management, advanced version control, and a modern user experience tailored for today's creative workflows.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/e7ce1616-8936-49e8-a3fa-45403cd92203" alt="Shotbuddy Main Interface with Table of Contents"/>
+  <img src="https://github.com/user-attachments/assets/e7ce1616-8936-49e8-a3fa-45403cd92203" alt="ShotBase Main Interface with Table of Contents"/>
 </p>
 
 ## ✨ Key Features (v3 Enhancements)
 
-This version of Shotbuddy is packed with features designed to make your workflow faster and more organized.
+This version of ShotBase is packed with features designed to make your workflow faster and more organized.
 
 ### 🚀 Streamlined Project Management
 
@@ -44,7 +46,7 @@ This version of Shotbuddy is packed with features designed to make your workflow
   ![First and Last Frame Variants](https://github.com/user-attachments/assets/4286dc1c-7df9-45f0-afd5-acbacf5255da)
 - **Instant Prompt Previews**: No more digging for prompt details. Simply hover over a thumbnail to see the exact prompt used to generate it.
   ![Instant Prompt Previews](https://github.com/user-attachments/assets/816a40ec-000b-4f6f-807e-51dcd5b305f1)
-- **Automatic File Organization**: Drag and drop your generated images or videos. Shotbuddy automatically versions them, archives old iterations in a `wip` folder, and keeps the latest version ready for your pipeline.
+- **Automatic File Organization**: Drag and drop your generated images or videos. ShotBase automatically versions them, archives old iterations in a `wip` folder, and keeps the latest version ready for your pipeline.
 
 ### 💡 Enhanced User Experience
 
@@ -56,7 +58,7 @@ This version of Shotbuddy is packed with features designed to make your workflow
 
 ## 🔧 Installation
 
-Get started with Shotbuddy in just a few steps. Using `uv` is recommended for its speed and efficiency.
+Get started with ShotBase in just a few steps. Using `uv` is recommended for its speed and efficiency.
 
 1.  **Clone the Repository**
     *(We use a shallow clone to download faster)*
@@ -89,11 +91,11 @@ Get started with Shotbuddy in just a few steps. Using `uv` is recommended for it
     ```
 
 4.  **Open Your Browser**
-    Navigate to **http://127.0.0.1:5001** to start using Shotbuddy!
+    Navigate to **http://127.0.0.1:5001** to start using ShotBase!
 
 ## 📁 How It Works: Project Folder Structure
 
-Shotbuddy automatically creates and maintains a clean, predictable folder structure for every project. This ensures your assets are always organized and easy to find.
+ShotBase automatically creates and maintains a clean, predictable folder structure for every project. This ensures your assets are always organized and easy to find.
 
 ```
 project_folder/
