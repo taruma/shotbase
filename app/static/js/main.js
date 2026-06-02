@@ -332,6 +332,7 @@ function showSetupScreen() {
     document.getElementById('setup-screen').style.display = 'flex';
     document.getElementById('main-interface').style.display = 'none';
     loadRecentProjects();
+    updatePageTitle(null);
     // Clear flag to indicate we're not in a project
     sessionStorage.removeItem('inProject');
 }
@@ -374,6 +375,26 @@ async function loadRecentProjects() {
     }
 }
 
+function updatePageTitle(project) {
+    if (!project) {
+        document.title = 'ShotBase • v' + getAppVersion();
+        return;
+    }
+    const info = project.info || {};
+    const title = info.title || project.name || 'Untitled Project';
+    const version = info.version ? 'v' + info.version : 'no version';
+    document.title = title + ' \u2022 ' + version + ' \u2022 ShotBase';
+}
+
+function getAppVersion() {
+    // Extract app version from the setup screen's version text
+    const versionEl = document.querySelector('.version-text');
+    if (versionEl && versionEl.textContent.startsWith('v')) {
+        return versionEl.textContent.substring(1);
+    }
+    return '?';
+}
+
 function updateProjectHeader(info, fallbackName) {
     const titleEl = document.getElementById('project-title-text');
     const versionEl = document.getElementById('project-version');
@@ -398,6 +419,7 @@ function showMainInterface() {
     document.getElementById('setup-screen').style.display = 'none';
     document.getElementById('main-interface').style.display = 'block';
     updateProjectHeader(currentProject.info || {}, currentProject.name);
+    updatePageTitle(currentProject);
     const input = document.getElementById('manual-path-input');
     if (input && currentProject && currentProject.path) {
         input.value = currentProject.path;
@@ -2059,7 +2081,10 @@ async function saveProjectInfo() {
             // Update the project header with saved values
             updateProjectHeader(result.data || {}, currentProject && currentProject.name);
             // Keep local cache coherent
-            if (currentProject) currentProject.info = result.data;
+            if (currentProject) {
+                currentProject.info = result.data;
+                updatePageTitle(currentProject);
+            }
         } else {
             showNotification(result.error || 'Failed to save project information', 'error');
         }
