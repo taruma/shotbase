@@ -134,10 +134,7 @@ function initVisualSortable() {
         animation: 150,
         ghostClass: 'visual-reorder-ghost',
         chosenClass: 'visual-reorder-chosen',
-        dragClass: 'visual-reorder-drag',
-        onEnd: function() {
-            updateCardNumbers();
-        }
+        dragClass: 'visual-reorder-drag'
     });
 }
 
