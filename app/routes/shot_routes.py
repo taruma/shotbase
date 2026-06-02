@@ -481,10 +481,15 @@ def serve_video(shot_name):
         shot_manager = get_shot_manager(project["path"])
         shot_info = shot_manager.get_shot_info(shot_name)
         
+        # Support type query param for alt_video
+        asset_type = request.args.get('type', 'video')
+        if asset_type not in ('video', 'alt_video'):
+            return "Invalid video type", 400
+        
         # Get the promoted video file path
-        video_path = shot_info['video']['file']
+        video_path = shot_info[asset_type]['file']
         if not video_path:
-            return "No video found for this shot", 404
+            return f"No {asset_type} found for this shot", 404
             
         video_file = Path(video_path)
         if not video_file.exists():

@@ -858,7 +858,7 @@ function createDropZone(shot, type) {
             const videoStyle = thumbnailUrl ?
                 `background-image: url('${thumbnailUrl}'); background-size: cover; background-position: center;` :
                 'background: #404040;';
-            mediaHtml = `<div class="preview-thumbnail video-thumbnail" style="${videoStyle}" onclick="playVideo('${shot.name}', '${shot.display_name || ''}')"></div>`;
+            mediaHtml = `<div class="preview-thumbnail video-thumbnail" style="${videoStyle}" onclick="playVideo('${shot.name}', '${shot.display_name || ''}', '${type}')"></div>`;
         } else {
             mediaHtml = thumbnailUrl ?
                 `<img class="preview-thumbnail" src="${thumbnailUrl}" alt="${displayAssetLabel(type)} thumbnail" onclick="showImage('${shot.name}', '${shot.display_name || ''}', '${type}')">` :
@@ -2073,23 +2073,29 @@ async function confirmExport() {
 
 // Video Playback Functions
 let currentVideoShotIndex = -1;
+let currentVideoAssetType = 'video';
 
 // Image Navigation Functions
 let currentImageShotIndex = -1;
 let currentImageAssetType = '';
 
-function playVideo(shotName, displayName) {
+function playVideo(shotName, displayName, assetType) {
+    assetType = assetType || 'video';
     const shot = shots.find(s => s.name === shotName);
-    if (!shot || !shot.video || !shot.video.file) {
-        showNotification('No video available for this shot', 'error');
+    const asset = shot && shot[assetType];
+    if (!asset || !asset.file) {
+        showNotification(`No ${assetType === 'alt_video' ? 'alt ' : ''}video available for this shot`, 'error');
         return;
     }
 
-    // Find the current shot index in the active shots array
-    const activeShots = shots.filter(s => !s.archived && s.video && s.video.file);
+    // Track which type we're viewing (for navigation)
+    currentVideoAssetType = assetType;
+
+    // Find the current shot index in the active shots array for this asset type
+    const activeShots = shots.filter(s => !s.archived && s[assetType] && s[assetType].file);
     currentVideoShotIndex = activeShots.findIndex(s => s.name === shotName);
 
-    const videoUrl = `/api/shots/video/${shotName}?v=${Date.now()}`;
+    const videoUrl = `/api/shots/video/${shotName}?type=${assetType}&v=${Date.now()}`;
     const videoPlayer = document.getElementById('video-player');
     const videoModalTitle = document.getElementById('video-modal-title');
     const videoVersion = document.getElementById('video-version');
@@ -2099,17 +2105,18 @@ function playVideo(shotName, displayName) {
     videoPlayer.src = videoUrl;
 
     // Set modal title and version
+    const typeLabel = assetType === 'alt_video' ? 'Alt Video' : '';
     if (displayName) {
-        videoModalTitle.innerHTML = `${escapeHtml(displayName)}<br><span style="font-size: 14px; opacity: 0.7; font-weight: normal;">(${shotName})</span>`;
+        videoModalTitle.innerHTML = `${escapeHtml(displayName)} ${typeLabel}<br><span style="font-size: 14px; opacity: 0.7; font-weight: normal;">(${shotName})</span>`;
     } else {
-        videoModalTitle.textContent = shotName;
+        videoModalTitle.textContent = `${shotName} ${typeLabel}`.trim();
     }
 
-    videoVersion.textContent = String(shot.video.current_version).padStart(3, '0');
+    videoVersion.textContent = String(asset.current_version).padStart(3, '0');
 
     // Set prompt text if available
-    if (shot.video.prompt) {
-        videoPrompt.textContent = shot.video.prompt;
+    if (asset.prompt) {
+        videoPrompt.textContent = asset.prompt;
         videoPrompt.style.display = 'block';
     } else {
         videoPrompt.textContent = '';
@@ -2130,26 +2137,28 @@ function playVideo(shotName, displayName) {
 }
 
 function navigateToNextShot() {
-    const activeShots = shots.filter(s => !s.archived && s.video && s.video.file);
+    const assetType = currentVideoAssetType || 'video';
+    const activeShots = shots.filter(s => !s.archived && s[assetType] && s[assetType].file);
     if (activeShots.length === 0 || currentVideoShotIndex === -1) return;
 
     const nextIndex = (currentVideoShotIndex + 1) % activeShots.length;
     const nextShot = activeShots[nextIndex];
     
     if (nextShot) {
-        playVideo(nextShot.name, nextShot.display_name || '');
+        playVideo(nextShot.name, nextShot.display_name || '', assetType);
     }
 }
 
 function navigateToPreviousShot() {
-    const activeShots = shots.filter(s => !s.archived && s.video && s.video.file);
+    const assetType = currentVideoAssetType || 'video';
+    const activeShots = shots.filter(s => !s.archived && s[assetType] && s[assetType].file);
     if (activeShots.length === 0 || currentVideoShotIndex === -1) return;
 
     const prevIndex = (currentVideoShotIndex - 1 + activeShots.length) % activeShots.length;
     const prevShot = activeShots[prevIndex];
     
     if (prevShot) {
-        playVideo(prevShot.name, prevShot.display_name || '');
+        playVideo(prevShot.name, prevShot.display_name || '', assetType);
     }
 }
 
