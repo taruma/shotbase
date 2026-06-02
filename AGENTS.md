@@ -25,7 +25,6 @@ Key features include:
 - Asset promotion and captioning
 - Thumbnail generation for images and videos (lazy, on-demand)
 - First/last frame image variants per shot
-- Lipsync asset management (driver, target, result)
 - Alternative video asset (alt_video) for reference, upscales, or additional video variants
 - Shot search modal with multi-token search, content/archive filters, and keyboard navigation
 - Visual reorder modal with drag-and-drop grid, thumbnail switching, preview, and inline editing
@@ -80,7 +79,7 @@ shotbuddy/
 ├── shots/                  # Project data directory (created per project)
 │   ├── wip/               # Work-in-progress shot folders
 │   ├── latest_images/     # Latest image versions
-│   └── latest_videos/     # Latest video versions (regular, alt, driver, target, result)
+│   └── latest_videos/     # Latest video versions (regular, alt)
 ├── exports/               # Export output directory
 ├── run.py                 # Application entry point
 ├── shotbuddy.cfg          # Server configuration
@@ -172,7 +171,7 @@ Environment variables can override config file settings:
 |---|---|---|---|
 | GET | `/api/shots/` | — | Get all shots with full info (ordered) |
 | POST | `/api/shots/` | — | Create new shot with gap-filling number |
-| POST | `/api/shots/upload` | Form: `file`, `shot_name`, `file_type` | Upload image/video; file_type: `image`/`first_image`/`last_image`/`video`/`alt_video`/`driver`/`target`/`result` |
+| POST | `/api/shots/upload` | Form: `file`, `shot_name`, `file_type` | Upload image/video; file_type: `image`/`first_image`/`last_image`/`video`/`alt_video` |
 | POST | `/api/shots/notes` | `{shot_name, notes}` | Save shot notes (notes.txt) |
 | POST | `/api/shots/caption` | `{shot_name, asset_type, caption}` | Save caption (first_image/last_image/video/alt_video) |
 | POST | `/api/shots/prompt` | `{shot_name, asset_type, version, prompt}` | Save prompt for a specific asset version |
@@ -229,7 +228,7 @@ shot_routes.py ──→ get_shot_manager(path) ──→ ShotManager (cached pe
 ```
 
 ### Side Effects of Common Operations
-- **Creating a shot**: creates `shots/wip/SH###/` with `images/`, `videos/`, `lipsync/` subdirs; creates shot order entry; updates project timestamp
+- **Creating a shot**: creates `shots/wip/SH###/` with `images/`, `videos/` subdirs; creates shot order entry; updates project timestamp
 - **Uploading an asset**: saves to `wip/SH###/images/` or `videos/` with version suffix; copies to `latest_images/` or `latest_videos/`; lazy thumbnail URL computed (generated on first request); extracts PNG prompts; updates version marker
 - **Promoting an asset**: copies WIP version → latest dir; updates `.version` marker; thumbnail regenerated on next request
 - **Archiving a shot**: toggles entry in `.archived_shots.json`
@@ -295,10 +294,6 @@ Every project directory contains these files (under `shots/`):
 - Regular video: `SH###_v001.mp4`
 - Alt video: `SH###_alt_v001.mp4`
 - Prompt files: `SH###_v001_video_prompt.txt`, `SH###_alt_v001_video_prompt.txt`
-
-### `shots/wip/SH###/lipsync/`
-- Files: `SH###_driver_v001.mp4`, `SH###_target_v001.mp4`, `SH###_result_v001.mp4`
-- Prompt files: `SH###_driver_v001_prompt.txt`, etc.
 
 ### `shots/latest_images/`
 - Promoted finals: `SH###_first.png`, `SH###_last.jpg` (or legacy `SH###.png`)

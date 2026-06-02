@@ -271,7 +271,6 @@ function handlePromptButtonClick(event) {
     const type = btn.dataset.type;
 
     // For image/video we set data-current-version and data-max-version.
-    // For lipsync we still have only data-version; treat it as both current and max.
     let currentVersion = btn.dataset.currentVersion ? parseInt(btn.dataset.currentVersion, 10) : undefined;
     let maxVersion = btn.dataset.maxVersion ? parseInt(btn.dataset.maxVersion, 10) : undefined;
 
@@ -877,7 +876,6 @@ function createShotRow(shot) {
                 ${createDropZone(shot, 'last_image')}
                 ${createDropZone(shot, 'video')}
                 ${createDropZone(shot, 'alt_video')}
-                ${'' /* createLipsyncZone(shot) */}
                 <div class="notes-cell">
                     <textarea class="notes-input" 
                               placeholder="Add notes..." 
@@ -967,42 +965,6 @@ function createDropZone(shot, type) {
                     </div>
                 `;
     }
-}
-
-function createLipsyncZone(shot) {
-    const parts = ['driver', 'target', 'result'];
-    let html = '<div class="lipsync-cell">';
-    for (const part of parts) {
-        const file = shot.lipsync[part];
-        const hasFile = file.version > 0;
-        const label = part.charAt(0).toUpperCase() + part.slice(1);
-        if (hasFile) {
-            const thumbnailUrl = file.thumbnail ? `${file.thumbnail}?v=${Date.now()}` : null;
-            const thumbnailStyle = thumbnailUrl ?
-                `background-image: url('${thumbnailUrl}'); background-size: cover; background-position: center;` :
-                'background: #404040;';
-            html += `
-                        <div class="drop-zone lipsync-drop" ondragover="handleDragOver(event, '${part}')" ondrop="handleDrop(event, '${shot.name}', '${part}')" ondragleave="handleDragLeave(event)">
-                            <div class="file-preview lipsync-preview">
-                                <div class="preview-thumbnail lipsync-thumbnail" data-label="${label}" style="${thumbnailStyle}"></div>
-                                <div class="version-badge">v${String(file.version).padStart(3, '0')}</div>
-                                <button class="prompt-button" title="View and edit prompt"
-                                        data-shot="${shot.name}"
-                                        data-type="${part}"
-                                        data-version="${file.version}">P</button>
-                            </div>
-                        </div>`;
-        } else {
-            html += `
-                        <div class="drop-zone lipsync-drop empty" ondragover="handleDragOver(event, '${part}')" ondrop="handleDrop(event, '${shot.name}', '${part}')" ondragleave="handleDragLeave(event)">
-                            <div class="drop-placeholder">
-                                <div class="text">${label}</div>
-                            </div>
-                        </div>`;
-        }
-    }
-    html += '</div>';
-    return html;
 }
 
 async function addNewShot() {
@@ -1717,8 +1679,6 @@ async function savePrompt() {
                     if (shot[key]) {
                         shot[key].prompt = promptText;
                     }
-                } else if (shot.lipsync && shot.lipsync[assetType]) {
-                    shot.lipsync[assetType].prompt = promptText;
                 }
             }
         }

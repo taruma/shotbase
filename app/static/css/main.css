@@ -433,32 +433,6 @@ body {
 }
 
 
-/* Lipsync column */
-.lipsync-cell {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 2px 0;
-}
-
-.lipsync-drop {
-    min-height: 34px;
-    padding: 2px;
-    margin: 0;
-    aspect-ratio: auto;
-}
-
-.lipsync-preview .preview-thumbnail {
-    width: 36px;
-    height: 26px;
-}
-
-.lipsync-thumbnail {
-    position: relative;
-    cursor: default;
-}
-
-
 .version-badge {
     position: absolute;
     bottom: 4px;

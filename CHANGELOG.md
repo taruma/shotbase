@@ -20,6 +20,9 @@ This major release rebrands the project from Shotbuddy to **ShotBase**, introduc
 - **Shot Grid Layout**: Reduced column widths and adjusted spacing for a more compact, readable layout. Improved text wrapping and spacing on drop placeholder elements.
 - **Export Modal Layout**: Simplified form layout with inline export type checkboxes, grouped sections, and the folder picker moved to the bottom action bar.
 
+### Removed
+- **Lipsync Asset Support**: Removed all lipsync-related code (`driver`, `target`, `result` asset types). This feature was never implemented end-to-end and had no UI surface area. Backend upload validation now rejects these file types, and the lipsync storage directory is no longer created in new shot folders.
+
 ### Fixed
 - **Footer Layout**: Footer now stays at the bottom of the page regardless of content height.
 - **Page Scroll Behind Modals**: Background scrolling now prevented when the visual reorder modal is open.

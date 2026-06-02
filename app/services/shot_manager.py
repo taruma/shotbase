@@ -190,16 +190,6 @@ class ShotManager:
                 for f in d.glob(f"{old_name}_*_v*.*"):
                     f.rename(d / f.name.replace(old_name, new_name, 1))
 
-        lipsync_dir = new_dir / "lipsync"
-        if lipsync_dir.exists():
-            for part in ["driver", "target", "result"]:
-                for ext in ALLOWED_VIDEO_EXTENSIONS:
-                    src = lipsync_dir / f"{old_name}_{part}{ext}"
-                    if src.exists():
-                        src.rename(lipsync_dir / f"{new_name}_{part}{ext}")
-                for f in lipsync_dir.glob(f"{old_name}_{part}_v*.*"):
-                    f.rename(lipsync_dir / f.name.replace(old_name, new_name, 1))
-
         for ext in ALLOWED_IMAGE_EXTENSIONS:
             # Legacy single-image final
             src = self.latest_images_dir / f"{old_name}{ext}"
@@ -265,7 +255,6 @@ class ShotManager:
         # Create subfolders
         (shot_dir / 'images').mkdir(exist_ok=True)
         (shot_dir / 'videos').mkdir(exist_ok=True)
-        (shot_dir / 'lipsync').mkdir(exist_ok=True)
 
         self.latest_images_dir.mkdir(parents=True, exist_ok=True)
         self.latest_videos_dir.mkdir(parents=True, exist_ok=True)
@@ -570,33 +559,11 @@ class ShotManager:
         if current_alt_video_version > 0:
             alt_video_prompt = self.load_prompt(shot_name, 'alt_video', current_alt_video_version)
 
-        # Lipsync videos
-        lipsync_dir = shot_dir / 'lipsync'
-        lipsync = {}
-        for part in ['driver', 'target', 'result']:
-            file_path, ver = self._get_latest_asset(
-                lipsync_dir, lipsync_dir,
-                f'{shot_name}_{part}', ALLOWED_VIDEO_EXTENSIONS
-            )
-            file_path = self._normalize_path(file_path)
-            prompt_text = ''
-            if ver > 0:
-                prompt_text = self.load_prompt(shot_name, part, ver)
-            lipsync[part] = {
-                'file': file_path,
-                'version': ver,
-                'thumbnail': None,  # will be replaced with video thumb below
-                'prompt': prompt_text,
-            }
-
         # Thumbnails — lazy: compute URL path only; generation deferred to first browser request
         first_thumb = self._thumbnail_url(first_image_path, shot_name, is_video=False) if first_image_path else None
         last_thumb = self._thumbnail_url(last_image_path, shot_name, is_video=False) if last_image_path else None
         video_thumb = self._thumbnail_url(latest_video, shot_name, is_video=True) if latest_video else None
         alt_video_thumb = self._thumbnail_url(latest_alt_video, f"{shot_name}_alt", is_video=True) if latest_alt_video else None
-
-        for part_name, info in lipsync.items():
-            info['thumbnail'] = self._thumbnail_url(info['file'], f"{shot_name}_{part_name}", is_video=True) if info['file'] else None
 
         captions = self.load_captions(shot_name)
 
@@ -642,7 +609,6 @@ class ShotManager:
                 'prompt': alt_video_prompt,
                 'caption': captions.get('alt_video', ''),
             },
-            'lipsync': lipsync,
             'archived': (shot_name in (archived_names if archived_names is not None else self._load_archived()))
         }
 
@@ -730,8 +696,6 @@ class ShotManager:
             return self.latest_videos_dir / f"{shot_name}.version"
         elif asset_type == 'alt_video':
             return self.latest_videos_dir / f"{shot_name}_alt.version"
-        elif asset_type in {'driver', 'target', 'result'}:
-            return (self.wip_dir / shot_name / 'lipsync') / f"{shot_name}_{asset_type}.version"
         else:
             raise ValueError('Invalid asset type')
 
@@ -938,9 +902,6 @@ class ShotManager:
         elif asset_type == 'alt_video':
             base_dir = shot_dir / 'videos'
             filename = f'{shot_name}_alt_v{version:03d}_video_prompt.txt'
-        elif asset_type in {'driver', 'target', 'result'}:
-            base_dir = shot_dir / 'lipsync'
-            filename = f'{shot_name}_{asset_type}_v{version:03d}_prompt.txt'
         else:
             raise ValueError('Invalid asset type')
         return base_dir / filename
@@ -996,9 +957,6 @@ class ShotManager:
         elif asset_type == 'alt_video':
             base_dir = shot_dir / 'videos'
             patterns = [f'{shot_name}_alt_v*_video_prompt.txt']
-        elif asset_type in {'driver', 'target', 'result'}:
-            base_dir = shot_dir / 'lipsync'
-            patterns = [f'{shot_name}_{asset_type}_v*_prompt.txt']
         else:
             raise ValueError('Invalid asset type')
 
@@ -1038,8 +996,7 @@ class ShotManager:
 
         # stem is now "{shot_name}_{asset_stem}" where asset_stem may
         # be just the shot name (promoted video / legacy image), or
-        # "{shot_name}_first", "{shot_name}_last", "{shot_name}_alt",
-        # "{shot_name}_driver", etc.
+        # "{shot_name}_first", "{shot_name}_last", "{shot_name}_alt", etc.
         shot_name = stem.split("_", 1)[0]
 
         # Locate the source file by scanning the project directories
@@ -1051,7 +1008,6 @@ class ShotManager:
             search_dirs = [
                 self.latest_videos_dir,
                 shot_dir / "videos",
-                shot_dir / "lipsync",
             ]
         else:
             search_dirs = [
