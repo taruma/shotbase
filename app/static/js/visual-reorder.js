@@ -335,27 +335,35 @@ function getVisibleVisualCards() {
     return visible;
 }
 
-function visualPlayCardVideo(shot) {
-    visualCurrentShotName = shot.name;
-    visualCurrentAssetType = 'video';
+// Determine which asset type to play based on current thumbnail type.
+// 'video' and 'alt_video' map to themselves; image types default to 'video'.
+function _getPlayType() {
+    if (visualThumbType === 'alt_video') return 'alt_video';
+    return 'video';
+}
 
-    if (!shot.video || !shot.video.file) {
-        showNotification('No video available for ' + shot.name, 'error');
+function visualPlayCardVideo(shot) {
+    var playType = _getPlayType();
+    visualCurrentShotName = shot.name;
+    visualCurrentAssetType = playType;
+
+    var asset = shot[playType];
+    if (!asset || !asset.file) {
+        var label = playType === 'alt_video' ? 'alt ' : '';
+        showNotification('No ' + label + 'video available for ' + shot.name, 'error');
         return;
     }
 
-    // Use the existing global playVideo — but our overridden navigate functions
-    // will handle arrow keys in visual-reorder card order
     if (typeof window.playVideo === 'function') {
-        window.playVideo(shot.name, shot.display_name || '', 'video');
+        window.playVideo(shot.name, shot.display_name || '', playType);
     }
 }
 
 function visualNavigateNext() {
     var cards = getVisibleVisualCards();
     if (cards.length === 0) return;
+    var playType = _getPlayType();
 
-    // Find current shot position
     var idx = -1;
     for (var i = 0; i < cards.length; i++) {
         if (cards[i].dataset.shotName === visualCurrentShotName) {
@@ -365,7 +373,6 @@ function visualNavigateNext() {
     }
     if (idx === -1) return;
 
-    // Find next card that has video, wrapping around
     for (var j = 1; j <= cards.length; j++) {
         var nextIdx = (idx + j) % cards.length;
         var nextName = cards[nextIdx].dataset.shotName;
@@ -373,9 +380,9 @@ function visualNavigateNext() {
         for (var k = 0; k < shots.length; k++) {
             if (shots[k].name === nextName) { nextShot = shots[k]; break; }
         }
-        if (nextShot && nextShot.video && nextShot.video.file) {
+        if (nextShot && nextShot[playType] && nextShot[playType].file) {
             visualCurrentShotName = nextName;
-            window.playVideo(nextName, nextShot.display_name || '', 'video');
+            window.playVideo(nextName, nextShot.display_name || '', playType);
             return;
         }
     }
@@ -384,6 +391,7 @@ function visualNavigateNext() {
 function visualNavigatePrev() {
     var cards = getVisibleVisualCards();
     if (cards.length === 0) return;
+    var playType = _getPlayType();
 
     var idx = -1;
     for (var i = 0; i < cards.length; i++) {
@@ -401,9 +409,9 @@ function visualNavigatePrev() {
         for (var k = 0; k < shots.length; k++) {
             if (shots[k].name === prevName) { prevShot = shots[k]; break; }
         }
-        if (prevShot && prevShot.video && prevShot.video.file) {
+        if (prevShot && prevShot[playType] && prevShot[playType].file) {
             visualCurrentShotName = prevName;
-            window.playVideo(prevName, prevShot.display_name || '', 'video');
+            window.playVideo(prevName, prevShot.display_name || '', playType);
             return;
         }
     }
