@@ -1704,6 +1704,21 @@ async function savePrompt() {
     closePromptModal();
 }
 
+async function openExportsFolder() {
+    try {
+        const response = await fetch('/api/shots/open-exports-folder', {
+            method: 'POST'
+        });
+        const result = await response.json();
+        if (!result.success) {
+            showNotification(result.error || 'Failed to open exports folder', 'error');
+        }
+    } catch (e) {
+        console.error('Open exports folder failed:', e);
+        showNotification('Failed to open exports folder', 'error');
+    }
+}
+
 async function openShotsFolder() {
     if (!currentProject) {
         showNotification('No project open', 'error');

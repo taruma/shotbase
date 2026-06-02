@@ -313,6 +313,13 @@
                 </div>
             </div>
 
+            <div class="export-folder-row">
+                <button class="dark-button" onclick="openExportsFolder()">
+                    <img src="{{ url_for('static', filename='icons/folder_24.png') }}" alt="" style="width: 16px; height: 16px; margin-right: 8px; vertical-align: middle;" />
+                    Open Exports Folder
+                </button>
+            </div>
+
             <div class="modal-buttons">
                 <button id="export-btn" class="green-button" onclick="confirmExport()">Export</button>
                 <button id="export-cancel-btn" class="dark-button" onclick="closeExportModal()">Cancel</button>

@@ -381,6 +381,42 @@ def open_shots_folder():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+@shot_bp.route("/open-exports-folder", methods=["POST"])
+def open_exports_folder():
+    """Open the current project's exports folder in the file browser. Creates it if missing."""
+    try:
+        project_manager = current_app.config['PROJECT_MANAGER']
+        project = project_manager.get_current_project()
+        if not project:
+            return jsonify({"success": False, "error": "No current project"}), 400
+
+        exports_path = Path(project["path"]) / "exports"
+        exports_path.mkdir(exist_ok=True)
+
+        if platform.system() == "Windows":
+            explorer_path = shutil.which("explorer")
+            if explorer_path:
+                subprocess.Popen([explorer_path, str(exports_path)], shell=False)  # noqa: S603
+            else:
+                raise FileNotFoundError("explorer not found")
+        elif platform.system() == "Darwin":
+            open_path = shutil.which("open")
+            if open_path:
+                subprocess.Popen([open_path, str(exports_path)], shell=False)  # noqa: S603
+            else:
+                raise FileNotFoundError("open not found")
+        else:
+            xdg_path = shutil.which("xdg-open")
+            if xdg_path:
+                subprocess.Popen([xdg_path, str(exports_path)], shell=False)  # noqa: S603
+            else:
+                raise FileNotFoundError("xdg-open not found")
+
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 @shot_bp.route("/promote", methods=["POST"])
 def promote_asset():
     try:
