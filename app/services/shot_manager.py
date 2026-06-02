@@ -93,6 +93,7 @@ class ShotManager:
         self.latest_images_dir.mkdir(parents=True, exist_ok=True)
         self.latest_videos_dir.mkdir(parents=True, exist_ok=True)
         self.thumbnail_cache_dir = get_project_thumbnail_cache_dir(self.project_path)
+        self._version_scan_cache = {}  # (shot_name, asset_type) -> max_version
 
     def _load_shot_order(self):
         """Load shot order list from JSON file."""
@@ -482,15 +483,15 @@ class ShotManager:
             self.latest_images_dir, shot_dir / 'images',
             f'{shot_name}_first', ALLOWED_IMAGE_EXTENSIONS
         )
-        # Backward compatibility for first frame (legacy single image)
-        legacy_image_path, legacy_max_version = self._get_latest_asset(
-            self.latest_images_dir, shot_dir / 'images',
-            shot_name, ALLOWED_IMAGE_EXTENSIONS
-        )
-        use_legacy_for_first = (not first_image_path and first_max_version == 0 and (legacy_image_path or legacy_max_version > 0))
-        if use_legacy_for_first:
-            first_image_path = legacy_image_path
-            first_max_version = legacy_max_version
+        # Only fall back to legacy naming if modern '_first' naming found nothing
+        if not first_image_path and first_max_version == 0:
+            legacy_image_path, legacy_max_version = self._get_latest_asset(
+                self.latest_images_dir, shot_dir / 'images',
+                shot_name, ALLOWED_IMAGE_EXTENSIONS
+            )
+            if legacy_image_path or legacy_max_version > 0:
+                first_image_path = legacy_image_path
+                first_max_version = legacy_max_version
 
         # New naming for last frame
         last_image_path, last_max_version = self._get_latest_asset(
@@ -498,13 +499,23 @@ class ShotManager:
             f'{shot_name}_last', ALLOWED_IMAGE_EXTENSIONS
         )
 
-        # Detect existing versions if max_version seems inaccurate
+        # Detect existing versions if max_version seems inaccurate (cached per ShotManager instance)
         if first_max_version == 0:
-            detected_first_versions = self._detect_existing_versions(shot_name, 'first_image')
+            cache_key = (shot_name, 'first_image')
+            if cache_key in self._version_scan_cache:
+                detected_first_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_first_versions = self._detect_existing_versions(shot_name, 'first_image')
+                self._version_scan_cache[cache_key] = detected_first_versions
             first_max_version = max(first_max_version, detected_first_versions)
-        
+
         if last_max_version == 0:
-            detected_last_versions = self._detect_existing_versions(shot_name, 'last_image')
+            cache_key = (shot_name, 'last_image')
+            if cache_key in self._version_scan_cache:
+                detected_last_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_last_versions = self._detect_existing_versions(shot_name, 'last_image')
+                self._version_scan_cache[cache_key] = detected_last_versions
             last_max_version = max(last_max_version, detected_last_versions)
 
         first_image_path = self._normalize_path(first_image_path)
@@ -522,9 +533,14 @@ class ShotManager:
             shot_name, ALLOWED_VIDEO_EXTENSIONS
         )
         
-        # Detect existing video versions if max_version seems inaccurate
+        # Detect existing video versions if max_version seems inaccurate (cached per ShotManager instance)
         if max_video_version == 0:
-            detected_video_versions = self._detect_existing_versions(shot_name, 'video')
+            cache_key = (shot_name, 'video')
+            if cache_key in self._version_scan_cache:
+                detected_video_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_video_versions = self._detect_existing_versions(shot_name, 'video')
+                self._version_scan_cache[cache_key] = detected_video_versions
             max_video_version = max(max_video_version, detected_video_versions)
             
         latest_video = self._normalize_path(latest_video)
@@ -540,7 +556,12 @@ class ShotManager:
         )
         
         if max_alt_video_version == 0:
-            detected_alt_video_versions = self._detect_existing_versions(shot_name, 'alt_video')
+            cache_key = (shot_name, 'alt_video')
+            if cache_key in self._version_scan_cache:
+                detected_alt_video_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_alt_video_versions = self._detect_existing_versions(shot_name, 'alt_video')
+                self._version_scan_cache[cache_key] = detected_alt_video_versions
             max_alt_video_version = max(max_alt_video_version, detected_alt_video_versions)
             
         latest_alt_video = self._normalize_path(latest_alt_video)
