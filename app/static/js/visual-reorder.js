@@ -23,6 +23,12 @@ function ensurePreviewToggleBtn() {
     var selector = document.querySelector('#visual-reorder-modal .visual-reorder-thumbnail-selector');
     if (!selector) return;
 
+    // Separator to visually distinguish from thumb type pills
+    var sep = document.createElement('span');
+    sep.className = 'thumbnail-selector-separator';
+    sep.setAttribute('aria-hidden', 'true');
+    selector.appendChild(sep);
+
     var btn = document.createElement('button');
     btn.id = 'visual-preview-toggle';
     btn.className = 'preview-toggle-btn';

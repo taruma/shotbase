@@ -50,6 +50,17 @@
     margin-bottom: 16px;
 }
 
+/* Separator between thumb pill buttons and preview toggle */
+.thumbnail-selector-separator {
+    width: 1px;
+    height: 26px;
+    background: #555;
+    margin-left: auto;
+    margin-right: 2px;
+    flex-shrink: 0;
+    align-self: center;
+}
+
 /* Preview toggle button (injected by JS into thumbnail selector row) */
 .preview-toggle-btn {
     padding: 6px 14px;
@@ -62,7 +73,7 @@
     font-weight: 500;
     transition: background 0.15s, border-color 0.15s, color 0.15s;
     user-select: none;
-    margin-left: 6px;
+    flex-shrink: 0;
 }
 
 .preview-toggle-btn:hover {
