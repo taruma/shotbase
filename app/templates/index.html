@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/visual-reorder.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/search-modal.css') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='icons/favicon-16x16.png') }}">
@@ -114,6 +115,12 @@
                                 <rect x="14" y="14" width="7" height="7" rx="1"/>
                             </svg>
                         </button>
+                        <button class="search-button icon-button" onclick="openSearchModal()" title="Search Project (Ctrl+Shift+F)" aria-label="Search Project">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                        </button>
                         <button class="green-button icon-button has-text" onclick="addNewShot()" title="Add New Shot" aria-label="Add New Shot">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -200,6 +207,22 @@
                 <button class="dark-button" onclick="saveReorder()">Save</button>
                 <button class="dark-button" onclick="closeReorderModal()">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Search Modal -->
+    <div id="search-modal" class="modal">
+        <div class="modal-content search-modal-content">
+            <div class="modal-header">
+                <h3>Search Project</h3>
+                <button class="close-modal" onclick="closeSearchModal()">&times;</button>
+            </div>
+            <input id="search-input" type="text" class="search-input" placeholder="Search prompts, captions, notes..." autocomplete="off" />
+            <div id="search-results" class="search-results">
+                <p class="search-placeholder">Type to search across all shots...</p>
+            </div>
+            <div id="search-stats" class="search-stats"></div>
+            <p class="search-shortcut-hint">Pro tip: press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> to open search</p>
         </div>
     </div>
 
@@ -391,5 +414,6 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/visual-reorder.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/search-modal.js') }}"></script>
 </body>
 </html>
