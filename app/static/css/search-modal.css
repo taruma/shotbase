@@ -30,15 +30,15 @@
 }
 
 .search-modal-content {
-    padding: 24px 28px 20px 28px;
+    padding: 16px 20px 14px 20px;
     text-align: left;
 }
 
 /* --- Search Input --- */
 .search-input {
     width: 100%;
-    padding: 14px 18px;
-    font-size: 1.1rem;
+    padding: 10px 14px;
+    font-size: 0.95rem;
     border: 2px solid #444;
     border-radius: 10px;
     background: #1e1e1e;
@@ -46,7 +46,7 @@
     outline: none;
     box-sizing: border-box;
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
-    margin-bottom: 16px;
+    margin-bottom: 10px;
     flex-shrink: 0;
 }
 
@@ -64,7 +64,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    margin-bottom: 14px;
+    margin-bottom: 8px;
     flex-wrap: wrap;
     flex-shrink: 0;
 }
@@ -86,8 +86,8 @@
 }
 
 .search-filter-pill {
-    padding: 4px 12px;
-    font-size: 0.78rem;
+    padding: 3px 10px;
+    font-size: 0.72rem;
     font-weight: 600;
     border: 1px solid #444;
     border-radius: 14px;
@@ -113,7 +113,7 @@
     flex: 1;
     overflow-y: auto;
     min-height: 100px;
-    max-height: calc(80vh - 180px);
+    max-height: calc(80vh - 150px);
 }
 
 .search-placeholder {
@@ -138,7 +138,7 @@
 }
 
 .search-shot-group {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
     border: 1px solid #333;
     border-radius: 8px;
     overflow: hidden;
@@ -148,8 +148,8 @@
 .search-shot-header {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
+    gap: 6px;
+    padding: 6px 10px;
     background: #222;
     border-bottom: 1px solid #333;
     cursor: pointer;
@@ -162,14 +162,14 @@
 
 .search-shot-name {
     font-weight: 700;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     color: #f0a040;
     font-family: 'Courier New', monospace;
     white-space: nowrap;
 }
 
 .search-shot-display {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: #b5b5b5;
     white-space: nowrap;
     overflow: hidden;
@@ -193,7 +193,7 @@
 }
 
 .search-match-item {
-    padding: 8px 14px;
+    padding: 5px 10px;
     border-bottom: 1px solid #2a2a2a;
     cursor: pointer;
     transition: background 0.12s ease;
@@ -214,7 +214,7 @@
 }
 
 .search-match-line {
-    line-height: 1.5;
+    line-height: 1.3;
 }
 
 .search-match-badge {
@@ -267,7 +267,8 @@
 
 /* --- Search Snippet --- */
 .search-snippet {
-    font-size: 0.85rem;
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+    font-size: 0.75rem;
     color: #bbb;
     white-space: pre-wrap;
     word-break: break-word;
@@ -282,20 +283,20 @@
 
 /* --- Stats Bar --- */
 .search-stats {
-    padding: 8px 0 0 0;
+    padding: 4px 0 0 0;
     font-size: 0.8rem;
     color: #777;
     text-align: right;
     flex-shrink: 0;
     border-top: 1px solid #333;
-    margin-top: 12px;
+    margin-top: 6px;
 }
 
 /* --- Keyboard shortcut hint --- */
 #search-modal .search-shortcut-hint {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #666;
-    margin-top: 6px;
+    margin-top: 4px;
     text-align: center;
 }
 
