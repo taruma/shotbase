@@ -1649,7 +1649,7 @@ async function savePrompt() {
         } else {
             const shot = shots.find(s => s.name === shotName);
             if (shot) {
-                if (assetType === 'first_image' || assetType === 'last_image' || assetType === 'image' || assetType === 'video') {
+                if (assetType === 'first_image' || assetType === 'last_image' || assetType === 'image' || assetType === 'video' || assetType === 'alt_video') {
                     const key = assetType === 'image' ? 'first_image' : assetType; // legacy map
                     if (shot[key]) {
                         shot[key].prompt = promptText;
