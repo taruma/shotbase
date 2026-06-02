@@ -409,7 +409,7 @@ Key patterns:
 - **Path normalization**: All paths internally use `/` (POSIX) via `_normalize_path()` regardless of OS
 - **Sub-shot limit**: sub-shot numbers max at 999; only increments by 10 starting at 050
 - **Main shot limit**: 999 shots max (gap-filling from 1–999)
-- **Recent projects limit**: 3 max
+- **Recent projects limit**: 6 max
 - **Thumbnail size**: hardcoded to 240×180 in `constants.py`
 - **Version detection**: `_detect_existing_versions()` scans filesystem to correct inaccurate version counts; runs when `max_version == 0`
 - **Browser auto-open**: `run.py` spawns a daemon thread that waits for the server to be ready, then opens the default browser

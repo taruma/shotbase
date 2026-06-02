@@ -5,6 +5,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 
 UPLOAD_FOLDER = os.environ.get('SHOTBUDDY_UPLOAD_FOLDER', 'uploads')
 PROJECTS_FILE = 'projects.json'
+MAX_RECENT_PROJECTS = 6
 ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
 ALLOWED_VIDEO_EXTENSIONS = {'.mp4', '.mov'}
 
