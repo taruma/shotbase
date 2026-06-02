@@ -314,9 +314,10 @@
             </div>
 
             <div class="modal-buttons">
-                <button class="green-button" onclick="confirmExport()">Export</button>
-                <button class="dark-button" onclick="closeExportModal()">Cancel</button>
+                <button id="export-btn" class="green-button" onclick="confirmExport()">Export</button>
+                <button id="export-cancel-btn" class="dark-button" onclick="closeExportModal()">Cancel</button>
             </div>
+            <div id="export-loading" class="export-loading" style="display: none;">Exporting assets... please wait.</div>
         </div>
     </div>
 

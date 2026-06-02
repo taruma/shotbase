@@ -1310,6 +1310,27 @@ body {
     font-size: 14px;
 }
 
+.export-modal-content .green-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.export-loading {
+    margin-top: 16px;
+    padding: 12px 16px;
+    text-align: center;
+    color: #b5b5b5;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 6px;
+    animation: export-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes export-pulse {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+}
+
 /* Back to Top Button */
 .back-to-top {
     position: fixed;

@@ -2061,6 +2061,16 @@ function openExportModal() {
 
 function closeExportModal() {
     document.getElementById('export-modal').style.display = 'none';
+    // Reset loading state in case modal was closed mid-export
+    const exportBtn = document.getElementById('export-btn');
+    const cancelBtn = document.getElementById('export-cancel-btn');
+    const loadingEl = document.getElementById('export-loading');
+    if (exportBtn) {
+        exportBtn.disabled = false;
+        exportBtn.textContent = 'Export';
+    }
+    if (cancelBtn) cancelBtn.disabled = false;
+    if (loadingEl) loadingEl.style.display = 'none';
 }
 
 async function confirmExport() {
@@ -2082,6 +2092,15 @@ async function confirmExport() {
         showNotification('Please select at least one export option (Images or Videos)', 'error');
         return;
     }
+
+    // Show loading state
+    const exportBtn = document.getElementById('export-btn');
+    const cancelBtn = document.getElementById('export-cancel-btn');
+    const loadingEl = document.getElementById('export-loading');
+    exportBtn.disabled = true;
+    exportBtn.textContent = 'Exporting...';
+    if (cancelBtn) cancelBtn.disabled = true;
+    if (loadingEl) loadingEl.style.display = 'block';
 
     try {
         const response = await fetch('/api/shots/export', {
@@ -2106,6 +2125,12 @@ async function confirmExport() {
     } catch (error) {
         console.error('Export failed:', error);
         showNotification('Export failed', 'error');
+    } finally {
+        // Reset loading state
+        exportBtn.disabled = false;
+        exportBtn.textContent = 'Export';
+        if (cancelBtn) cancelBtn.disabled = false;
+        if (loadingEl) loadingEl.style.display = 'none';
     }
 }
 
