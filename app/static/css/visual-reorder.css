@@ -50,6 +50,94 @@
     margin-bottom: 16px;
 }
 
+/* Preview toggle button (injected by JS into thumbnail selector row) */
+.preview-toggle-btn {
+    padding: 6px 14px;
+    background: #3a3a3a;
+    color: #e5e5e5;
+    border: 1px solid #555;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    user-select: none;
+    margin-left: 6px;
+}
+
+.preview-toggle-btn:hover {
+    background: #505050;
+}
+
+.preview-toggle-btn.active {
+    background: #ff9800;
+    color: #1a1a1a;
+    border-color: #ff9800;
+    font-weight: 600;
+}
+
+/* Preview mode: card thumb becomes clickable with play overlay */
+.preview-mode .visual-reorder-card {
+    cursor: default;
+}
+
+.preview-mode .card-thumb-wrapper {
+    cursor: pointer;
+}
+
+.preview-mode .card-thumb-wrapper::after {
+    content: '▶';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 28px;
+    color: rgba(255, 255, 255, 0.85);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+.preview-mode .card-thumb-wrapper:hover::after {
+    opacity: 1;
+}
+
+.preview-mode .card-thumb-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.25);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.preview-mode .card-thumb-wrapper:hover::before {
+    opacity: 1;
+}
+
+/* Light theme overrides for preview toggle */
+.light .preview-toggle-btn {
+    background: #e8e8e8;
+    color: #333;
+    border-color: #ccc;
+}
+
+.light .preview-toggle-btn:hover {
+    background: #d5d5d5;
+}
+
+.light .preview-toggle-btn.active {
+    background: #ff9800;
+    color: #fff;
+    border-color: #ff9800;
+}
+
 /* Grid layout */
 .visual-reorder-grid {
     display: grid;
