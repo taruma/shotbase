@@ -192,7 +192,7 @@
 }
 
 .search-match-item {
-    padding: 8px 14px 8px 24px;
+    padding: 8px 14px;
     border-bottom: 1px solid #2a2a2a;
     cursor: pointer;
     transition: background 0.12s ease;
@@ -212,15 +212,21 @@
     border-left: 3px solid #f0a040;
 }
 
+.search-match-line {
+    line-height: 1.5;
+}
+
 .search-match-badge {
-    display: inline-block;
+    display: inline;
     font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
     padding: 2px 8px;
     border-radius: 4px;
-    margin-bottom: 4px;
+    margin-right: 6px;
     letter-spacing: 0.3px;
+    vertical-align: middle;
+    white-space: nowrap;
 }
 
 .search-match-badge.prompt {
@@ -241,6 +247,18 @@
     border: 1px solid rgba(156, 163, 175, 0.3);
 }
 
+.search-match-badge.shot-name-badge {
+    background: rgba(168, 85, 247, 0.2);
+    color: #a78bfa;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.search-match-badge.display-name-badge {
+    background: rgba(192, 132, 252, 0.2);
+    color: #c4b5fd;
+    border: 1px solid rgba(192, 132, 252, 0.3);
+}
+
 .search-match-badge .asset-label {
     opacity: 0.75;
     margin-left: 2px;
@@ -250,14 +268,8 @@
 .search-snippet {
     font-size: 0.85rem;
     color: #bbb;
-    line-height: 1.5;
     white-space: pre-wrap;
     word-break: break-word;
-    max-height: 80px;
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
 }
 
 .search-snippet mark {

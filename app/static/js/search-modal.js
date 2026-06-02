@@ -62,6 +62,14 @@ function buildSearchIndex() {
         var notes = (shot.notes || '').trim();
         if (notes) items.push({ field: 'Notes', text: notes, badgeType: 'notes-badge', assetLabel: '' });
 
+        // Shot Name (always searchable)
+        var shotName = shot.name || '';
+        if (shotName) items.push({ field: 'Shot Name', text: shotName, badgeType: 'shot-name-badge', assetLabel: '' });
+
+        // Display Name (always searchable)
+        var displayName = (shot.display_name || '').trim();
+        if (displayName) items.push({ field: 'Display Name', text: displayName, badgeType: 'display-name-badge', assetLabel: '' });
+
         if (items.length > 0) {
             searchIndex.push({
                 shotName: shot.name,
@@ -188,10 +196,12 @@ function performSearch(query) {
         if (searchArchiveFilter === 'archived' && !entry.archived) return;
 
         entry.items.forEach(function (item) {
-            // Apply content type filter
-            if (searchContentFilter === 'prompt' && item.badgeType !== 'prompt') return;
-            if (searchContentFilter === 'caption' && item.badgeType !== 'caption') return;
-            if (searchContentFilter === 'notes' && item.badgeType !== 'notes-badge') return;
+            // Apply content type filter (skip for shot/display name — always searchable)
+            if (item.badgeType !== 'shot-name-badge' && item.badgeType !== 'display-name-badge') {
+                if (searchContentFilter === 'prompt' && item.badgeType !== 'prompt') return;
+                if (searchContentFilter === 'caption' && item.badgeType !== 'caption') return;
+                if (searchContentFilter === 'notes' && item.badgeType !== 'notes-badge') return;
+            }
 
             var text = item.text || '';
             var lowerText = text.toLowerCase();
@@ -233,7 +243,7 @@ function highlightSnippet(text, query) {
     // Split query into tokens so each word gets highlighted individually
     var tokens = query.trim().split(/\s+/).filter(function (t) { return t.length > 0; });
 
-    // Build array of replacement ranges: { start, end }
+    // Build array of match ranges: { start, end } in the raw escaped text
     var escaped = safeEscape(text);
     var lower = escaped.toLowerCase();
     var ranges = [];
@@ -263,15 +273,60 @@ function highlightSnippet(text, query) {
     // Sort ranges by start position
     ranges.sort(function (a, b) { return a.start - b.start; });
 
-    // Build result string with <mark> tags
-    var result = '';
-    var lastIdx = 0;
-    for (var i = 0; i < ranges.length; i++) {
-        result += escaped.substring(lastIdx, ranges[i].start);
-        result += '<mark>' + escaped.substring(ranges[i].start, ranges[i].end) + '</mark>';
-        lastIdx = ranges[i].end;
+    // If no ranges, just return a short preview of the text
+    if (ranges.length === 0) {
+        return escaped.substring(0, 200);
     }
-    result += escaped.substring(lastIdx);
+
+    // Center the snippet window around the first match
+    var CONTEXT = 100;  // characters of context before/after the match
+    var firstMatch = ranges[0].start;
+    var windowStart = Math.max(0, firstMatch - CONTEXT);
+    // Try to start at a word boundary (space or newline)
+    while (windowStart > 0 && escaped.charAt(windowStart) !== ' ' && escaped.charAt(windowStart) !== '\n') {
+        windowStart--;
+    }
+    var windowEnd = Math.min(escaped.length, firstMatch + CONTEXT + (ranges[0].end - ranges[0].start));
+    // Extend to include nearby matches
+    for (var i = 1; i < ranges.length; i++) {
+        if (ranges[i].start < windowEnd + CONTEXT) {
+            windowEnd = Math.min(escaped.length, ranges[i].end + CONTEXT);
+        } else {
+            break;
+        }
+    }
+
+    var prefix = windowStart > 0 ? '…' : '';
+    var suffix = windowEnd < escaped.length ? '…' : '';
+
+    // Extract the window text
+    var windowText = escaped.substring(windowStart, windowEnd);
+
+    // Adjust ranges to be relative to windowStart
+    var result = prefix;
+    var lastIdx = 0;  // position within windowText
+    for (var i = 0; i < ranges.length; i++) {
+        var relStart = ranges[i].start - windowStart;
+        var relEnd = ranges[i].end - windowStart;
+
+        // Skip ranges outside the window
+        if (relEnd < 0) continue;
+        if (relStart >= windowText.length) break;
+
+        // Clamp to window bounds
+        relStart = Math.max(0, relStart);
+        relEnd = Math.min(windowText.length, relEnd);
+
+        if (relStart > lastIdx) {
+            result += windowText.substring(lastIdx, relStart);
+        }
+        if (relEnd > relStart) {
+            result += '<mark>' + windowText.substring(relStart, relEnd) + '</mark>';
+        }
+        lastIdx = relEnd;
+    }
+    result += windowText.substring(lastIdx);
+    result += suffix;
 
     return result;
 }
@@ -366,8 +421,10 @@ function renderSearchResults(data) {
             var labelSuffix = match.assetLabel ? ' <span class="asset-label">(' + safeEscape(match.assetLabel) + ')</span>' : '';
 
             html += '<li class="search-match-item search-clickable" onclick="scrollToShot(\'' + safeEscape(shotResult.shotName).replace(/'/g, "\\'") + '\'); closeSearchModal();">';
-            html += '<div class="search-match-badge ' + match.badgeType + '">' + safeEscape(match.field) + labelSuffix + '</div>';
-            html += '<div class="search-snippet">' + highlightSnippet(match.text, query) + '</div>';
+            html += '<div class="search-match-line">';
+            html += '<span class="search-match-badge ' + match.badgeType + '">' + safeEscape(match.field) + labelSuffix + '</span>';
+            html += '<span class="search-snippet">' + highlightSnippet(match.text, query) + '</span>';
+            html += '</div>';
             html += '</li>';
         });
         html += '</ul>';
