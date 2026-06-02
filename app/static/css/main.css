@@ -126,6 +126,9 @@ body {
     padding: 0;
     border-bottom: 1px solid #333;
     box-shadow: 0 2px 14px rgba(0, 0, 0, 0.35);
+    position: sticky;
+    top: 0;
+    z-index: 500;
 }
 
 .header .container {
