@@ -455,15 +455,13 @@ function createTocUI() {
 function positionToc() {
     const toc = document.getElementById('shot-toc');
     const grid = document.querySelector('.shot-grid');
-    const menuBar = document.querySelector('.menu-bar');
     const header = document.querySelector('.header');
 
     if (!toc || !grid) return;
 
     const gridRect = grid.getBoundingClientRect();
-    const menuHeight = menuBar ? menuBar.offsetHeight : 0;
     const headerHeight = header ? header.offsetHeight : 0;
-    const topOffset = Math.max(20, menuHeight + headerHeight + 10);
+    const topOffset = Math.max(20, headerHeight + 10);
     const availableWidth = window.innerWidth - gridRect.right - 32;
 
     // Determine mode: docked or drawer

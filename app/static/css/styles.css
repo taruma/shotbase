@@ -4,11 +4,6 @@ body.light {
     color: #1a1a1a;
 }
 
-.light .menu-bar {
-    background: #fefefe;
-    border-bottom: 1px solid #ddd;
-}
-
 .light .dark-button {
     background: #e0e0e0;
     color: #1a1a1a;
@@ -544,6 +539,11 @@ body.light {
 
 .light .recent-project-path {
     color: #777;
+}
+
+/* Light Theme Overrides for manual path section inside setup card */
+.light .manual-path-section {
+    border-top-color: #ddd !important;
 }
 
 /* Light Theme Overrides for link-button */

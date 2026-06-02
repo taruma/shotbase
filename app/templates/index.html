@@ -17,38 +17,6 @@
     <!-- Floating Theme Toggle -->
     <button id="theme-toggle" class="dark-button icon-button floating-theme-toggle" title="Toggle dark/light theme" aria-label="Toggle dark/light theme">🌙</button>
     
-    <div class="menu-bar">
-        <div class="container">
-            <div class="setup-panel">
-                <button class="green-button" onclick="openProjectDialog()">
-                    Open Project...
-                </button>
-                <button class="dark-button" onclick="openCreateProjectModal()">
-                    New Project...
-                </button>
-                <div class="manual-path-fallback" id="manual-path-fallback">
-                    <input
-                        id="manual-path-input"
-                        class="path-input"
-                        type="text"
-                        placeholder="Enter full path to project folder"
-                    />
-                    <button class="dark-button" onclick="loadProjectFromManualPath()">
-                        Load from Path
-                    </button>
-                    <button class="dark-button" onclick="toggleManualPath()">
-                        Hide
-                    </button>
-                </div>
-                <div style="margin-top: 5px;">
-                    <button id="manual-path-toggle" class="link-button" onclick="toggleManualPath(); return false;" aria-expanded="false" aria-controls="manual-path-fallback">
-                        Manual path input...
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Setup Screen -->
     <div id="setup-screen" class="setup-screen">
         <div class="setup-card">
@@ -73,6 +41,26 @@
             <div id="recent-projects-section" style="display: none;">
                 <h3 style="margin-bottom: 15px; color: #b5b5b5;">Recent Projects</h3>
                 <div id="recent-projects-list" class="recent-projects-list"></div>
+            </div>
+            
+            <div class="manual-path-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #333;">
+                <button id="manual-path-toggle" class="link-button" onclick="toggleManualPath(); return false;" aria-expanded="false" aria-controls="manual-path-fallback">
+                    Manual path input...
+                </button>
+                <div class="manual-path-fallback" id="manual-path-fallback" style="display: none; margin-top: 10px;">
+                    <input
+                        id="manual-path-input"
+                        class="path-input"
+                        type="text"
+                        placeholder="Enter full path to project folder"
+                    />
+                    <button class="dark-button" onclick="loadProjectFromManualPath()">
+                        Load from Path
+                    </button>
+                    <button class="dark-button" onclick="toggleManualPath()">
+                        Hide
+                    </button>
+                </div>
             </div>
         </div>
     </div>
