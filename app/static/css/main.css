@@ -1214,31 +1214,46 @@ body {
 .export-form {
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 20px;
 }
 
 .form-section {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
 }
 
 .form-label {
     color: #b5b5b5;
     font-weight: 500;
     font-size: 14px;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
-.export-options-group,
-.additional-options-group {
+/* Export sections — clean minimal list */
+.export-section {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 16px;
-    background: #2a2a2a;
-    border-radius: 8px;
-    border: 1px solid #404040;
+    gap: 6px;
+}
+
+.export-section-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #808080;
+    margin-bottom: 4px;
+}
+
+.export-checkbox-row {
+    display: flex;
+    gap: 20px;
+}
+
+.checkbox-inline {
+    display: inline-flex;
+    width: auto;
 }
 
 .checkbox-label {
@@ -1288,14 +1303,27 @@ body {
     box-shadow: 0 0 0 3px rgba(0, 200, 81, 0.2);
 }
 
-/* Enhanced modal buttons */
-.export-modal-content .modal-buttons {
-    margin-top: 32px;
+/* Bottom action row */
+.export-actions {
+    margin-top: 28px;
     padding-top: 20px;
     border-top: 1px solid #404040;
     display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 12px;
-    justify-content: flex-end;
+}
+
+.export-actions .modal-buttons {
+    display: flex;
+    gap: 16px;
+    margin-top: 0;
+}
+
+.export-folder-btn {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
 }
 
 .export-modal-content .green-button {
@@ -1308,17 +1336,6 @@ body {
     padding: 12px 24px;
     font-weight: 600;
     font-size: 14px;
-}
-
-.export-folder-row {
-    margin-top: 12px;
-    margin-bottom: 16px;
-}
-
-.export-folder-row .dark-button {
-    padding: 8px 16px;
-    font-size: 13px;
-    font-weight: 500;
 }
 
 .export-modal-content .green-button:disabled {
