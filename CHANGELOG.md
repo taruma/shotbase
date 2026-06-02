@@ -1,5 +1,51 @@
 # Changelog
 
+## v4.0.0 (June 3, 2026) - by Taruma Sakti
+
+This major release rebrands the project from Shotbuddy to **ShotBase**, introduces shot search and visual reorder modals, adds alternative video asset support, and delivers a refined UI with performance improvements across the board.
+
+### Added
+- **Shot Search Modal**: Full client-side search across all shots' prompts, captions, notes, shot names, and display names. Features multi-token search with highlighted snippets, keyboard navigation (arrow keys + Enter), Ctrl+Shift+F global shortcut, and click-to-scroll to the matching shot in the main grid. Includes content filter pills (All/Prompts/Captions/Notes) and archive status filter (All/Active/Archived), with shot and display names always searchable regardless of active filter.
+- **Visual Reorder Modal**: Drag-and-drop shot sorting grid with 5 responsive columns. Cards display thumbnails, display names, and shot codes. Includes thumbnail type switching (video, alt video, first frame, last frame), a preview mode that plays the shot's video directly from the grid with contextual navigation, and an edit mode for inline display name editing.
+- **Alternative Video Asset**: New `alt_video` asset type that can be used for any purpose such as reference video, upscaled footage, or additional video variants. Fully supported across upload, version management, prompt saving, thumbnail generation, video playback, export, and the visual reorder modal.
+- **Dynamic Page Title**: Browser tab now displays the current project title and version, falling back to the app version on the setup screen.
+- **Lazy Thumbnail Generation**: Thumbnails are now generated on-demand when first requested by the browser, rather than eagerly during shot listing. This reduces filesystem overhead and speeds up initial page loads.
+- **Export Enhancements**: Display name column added to markdown export tables. Alt video assets included in exports and metadata. New "Open Exports Folder" button in the export modal for quick access. Loading state with disabled buttons during export for better user feedback.
+- **Sticky Header**: Header now sticks to the top of the viewport on scroll for persistent access to controls.
+- **TOC Collapsible Archived Section**: Toggle button with chevron to show/hide archived shots in the table of contents, with visibility state persisted across sessions. Styled for both light and dark themes.
+
+### Changed
+- **Setup Card Consolidation**: Project open, new, and manual path input controls moved from the top menu bar into the setup screen card. The separate menu bar and its associated layout logic were removed, simplifying the interface.
+- **Recent Projects Expanded**: Limit increased from 3 to 6 projects with a wider settings modal and CSS grid layout. Project titles are now shown instead of directory names, and long paths are truncated to prevent layout overflow.
+- **Shot Grid Layout**: Reduced column widths and adjusted spacing for a more compact, readable layout. Improved text wrapping and spacing on drop placeholder elements.
+- **Export Modal Layout**: Simplified form layout with inline export type checkboxes, grouped sections, and the folder picker moved to the bottom action bar.
+
+### Fixed
+- **Footer Layout**: Footer now stays at the bottom of the page regardless of content height.
+- **Page Scroll Behind Modals**: Background scrolling now prevented when the visual reorder modal is open.
+- **Local Notes Sync**: Shot notes update in the UI immediately before the API call completes, providing instant feedback.
+- **TOC Visibility**: Table of contents panel now properly hidden when returning to the setup screen.
+- **Alt Video Prompt Saving**: Prompt saving now correctly includes alt video assets.
+- **Recent Projects Overflow**: Layout now handles long project paths with text truncation.
+- **Search Snippet Accuracy**: Improved snippet windowing, highlight marker lengths, and character cap for more readable search results.
+
+### Performance
+- **Cached Version Scans**: Version detection results are now cached per shot and asset type, eliminating redundant filesystem scans. Legacy image fallback logic only runs when modern naming finds nothing.
+- **Archived Shot Cache**: Archived status cached once per shot listing call instead of repeated disk reads.
+- **Lazy Thumbnail Generation**: Defers thumbnail creation to first browser request, reducing initial page load work.
+
+### Refactored
+- **Modal Close Behavior Centralized**: Click-outside and Escape-key closing logic extracted from individual modules into a single centralized handler, reducing duplication and making modal behavior more maintainable.
+
+### Documentation
+- **AGENTS.md Expanded**: Added quick-reference table with current project state and a complete API endpoint reference covering all 24 endpoints.
+- **QWEN.md Removed**: Superseded by the expanded AGENTS.md.
+
+### AI Development Attribution
+This release was developed with AI assistance using Deepseek V4 pro with Cline in Plan and Act mode. All generated changes were manually reviewed, tested, and refined by the maintainer, Taruma Sakti, to ensure quality and alignment with project goals.
+
+This version significantly enhances shot organization with searchable, filterable shot discovery, drag-and-drop visual reordering, expanded asset type support, and a polished, rebranded interface — all while improving performance through lazy generation and caching.
+
 ## v3.4.0 (October 27, 2025) - by Taruma Sakti
 
 This minor release introduces enhanced navigation capabilities, improved shot management workflows, and refined user experience for media browsing and project organization.
