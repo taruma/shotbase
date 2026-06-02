@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shotbuddy"
-version = "3.4.0"
+version = "4.0.0"
 description = "AI-driven image-to-video filmmaking workflow manager"
 readme = "README.md"
 license = { file = "LICENSE.txt" }
