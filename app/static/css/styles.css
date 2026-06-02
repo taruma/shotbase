@@ -497,7 +497,7 @@ body.light {
 
 .recent-projects-list {
     display: grid;
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 10px;
 }
 
@@ -513,6 +513,8 @@ body.light {
 
 .recent-project-info {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .recent-project-name {
@@ -523,7 +525,9 @@ body.light {
 .recent-project-path {
     font-size: 12px;
     color: #b5b5b5;
-    word-break: break-all;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .manual-path-fallback {

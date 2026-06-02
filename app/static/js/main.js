@@ -343,7 +343,7 @@ async function loadRecentProjects() {
                 projectItem.innerHTML = `
                             <div class="recent-project-info">
                                 <div class="recent-project-name">${escapeHtml(project.name)}</div>
-                                <div class="recent-project-path">${escapeHtml(project.path)}</div>
+<div class="recent-project-path" title="${escapeHtml(project.path)}">${escapeHtml(project.path)}</div>
                             </div>
                             <button class="dark-button" data-project-path="${project.path}">Open</button>
                         `;
