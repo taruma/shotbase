@@ -61,8 +61,9 @@
     align-self: center;
 }
 
-/* Preview toggle button (injected by JS into thumbnail selector row) */
-.preview-toggle-btn {
+/* Preview and Edit toggle buttons (injected by JS into thumbnail selector row) */
+.preview-toggle-btn,
+.edit-toggle-btn {
     padding: 6px 14px;
     background: #3a3a3a;
     color: #e5e5e5;
@@ -76,7 +77,8 @@
     flex-shrink: 0;
 }
 
-.preview-toggle-btn:hover {
+.preview-toggle-btn:hover,
+.edit-toggle-btn:hover {
     background: #505050;
 }
 
@@ -84,6 +86,13 @@
     background: #ff9800;
     color: #1a1a1a;
     border-color: #ff9800;
+    font-weight: 600;
+}
+
+.edit-toggle-btn.active {
+    background: #2196F3;
+    color: #fff;
+    border-color: #2196F3;
     font-weight: 600;
 }
 
@@ -132,14 +141,47 @@
     opacity: 1;
 }
 
-/* Light theme overrides for preview toggle */
-.light .preview-toggle-btn {
+/* Edit mode: card info area becomes clickable with pencil indicator */
+.edit-mode .visual-reorder-card {
+    cursor: default;
+}
+
+.edit-mode .card-info {
+    cursor: pointer;
+    position: relative;
+    border-radius: 0 0 6px 6px;
+    transition: background 0.15s ease;
+}
+
+.edit-mode .card-info::after {
+    content: '✏️';
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+}
+
+.edit-mode .card-info:hover::after {
+    opacity: 0.9;
+}
+
+.edit-mode .card-info:hover {
+    background: rgba(33, 150, 243, 0.12);
+}
+
+/* Light theme overrides for preview and edit toggle */
+.light .preview-toggle-btn,
+.light .edit-toggle-btn {
     background: #e8e8e8;
     color: #333;
     border-color: #ccc;
 }
 
-.light .preview-toggle-btn:hover {
+.light .preview-toggle-btn:hover,
+.light .edit-toggle-btn:hover {
     background: #d5d5d5;
 }
 
@@ -147,6 +189,12 @@
     background: #ff9800;
     color: #fff;
     border-color: #ff9800;
+}
+
+.light .edit-toggle-btn.active {
+    background: #2196F3;
+    color: #fff;
+    border-color: #2196F3;
 }
 
 /* Grid layout */

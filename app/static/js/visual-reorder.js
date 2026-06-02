@@ -8,6 +8,7 @@
 let visualReorderSortable = null;
 let visualThumbType = 'video';
 let previewMode = false;
+let editMode = false;
 let visualCurrentShotName = null;
 let visualCurrentAssetType = 'video';
 let _savedNavigateNext = null;
@@ -41,6 +42,24 @@ function ensurePreviewToggleBtn() {
     selector.appendChild(btn);
 }
 
+function ensureEditToggleBtn() {
+    if (document.getElementById('visual-edit-toggle')) return;
+
+    var selector = document.querySelector('#visual-reorder-modal .visual-reorder-thumbnail-selector');
+    if (!selector) return;
+
+    var btn = document.createElement('button');
+    btn.id = 'visual-edit-toggle';
+    btn.className = 'edit-toggle-btn';
+    btn.textContent = '✏️ Edit';
+    btn.title = 'Toggle edit display name mode';
+    btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleEditMode();
+    });
+    selector.appendChild(btn);
+}
+
 function togglePreviewMode() {
     previewMode = !previewMode;
 
@@ -48,6 +67,14 @@ function togglePreviewMode() {
     var grid = document.getElementById('visual-reorder-grid');
 
     if (previewMode) {
+        // Turn off edit mode if active
+        if (editMode) {
+            editMode = false;
+            var etBtn = document.getElementById('visual-edit-toggle');
+            if (etBtn) etBtn.classList.remove('active');
+            if (grid) grid.classList.remove('edit-mode');
+        }
+
         if (btn) {
             btn.textContent = '■ Preview';
             btn.classList.add('active');
@@ -75,6 +102,25 @@ function togglePreviewMode() {
     }
 }
 
+function toggleEditMode() {
+    editMode = !editMode;
+
+    var btn = document.getElementById('visual-edit-toggle');
+    var grid = document.getElementById('visual-reorder-grid');
+
+    if (editMode) {
+        // Turn off preview if active
+        if (previewMode) {
+            togglePreviewMode();
+        }
+        if (btn) btn.classList.add('active');
+        if (grid) grid.classList.add('edit-mode');
+    } else {
+        if (btn) btn.classList.remove('active');
+        if (grid) grid.classList.remove('edit-mode');
+    }
+}
+
 function restoreNavigationOverrides() {
     if (_savedNavigateNext) {
         window.navigateToNextShot = _savedNavigateNext;
@@ -97,16 +143,22 @@ function openVisualReorderModal() {
     var filterInput = document.getElementById('visual-reorder-filter');
     if (!grid) return;
 
-    // Reset preview state
+    // Reset preview and edit state
     previewMode = false;
+    editMode = false;
     visualCurrentShotName = null;
     visualCurrentAssetType = 'video';
     restoreNavigationOverrides();
     if (grid) grid.classList.remove('preview-mode');
+    if (grid) grid.classList.remove('edit-mode');
     var ptBtn = document.getElementById('visual-preview-toggle');
     if (ptBtn) {
         ptBtn.textContent = '▶ Preview';
         ptBtn.classList.remove('active');
+    }
+    var etBtn = document.getElementById('visual-edit-toggle');
+    if (etBtn) {
+        etBtn.classList.remove('active');
     }
 
     grid.innerHTML = '';
@@ -134,8 +186,9 @@ function openVisualReorderModal() {
         }
     });
 
-    // Ensure preview toggle button exists
+    // Ensure preview and edit toggle buttons exist
     ensurePreviewToggleBtn();
+    ensureEditToggleBtn();
 
     document.body.style.overflow = 'hidden';
     document.getElementById('visual-reorder-modal').style.display = 'flex';
@@ -185,6 +238,33 @@ function createVisualCard(shot, orderNum) {
             }
             if (!shot) return;
             visualPlayCardVideo(shot);
+        });
+    }
+
+    // Card info click → edit display name (only when edit mode is ON)
+    var info = card.querySelector('.card-info');
+    if (info) {
+        info.addEventListener('click', function(e) {
+            if (!editMode) return;
+            e.stopPropagation();
+            var shotName = card.dataset.shotName;
+            var shot = null;
+            for (var i = 0; i < shots.length; i++) {
+                if (shots[i].name === shotName) { shot = shots[i]; break; }
+            }
+            if (!shot) return;
+            var currentName = shot.display_name || '';
+            var newName = prompt('Edit display name for ' + shotName + ':', currentName);
+            if (newName === null || newName === currentName) return;
+            // Update shots array
+            shot.display_name = newName;
+            // Update card info HTML
+            var dnHTML = newName ? '<div class="card-display-name" title="' + escapeHtml(newName) + '">' + escapeHtml(newName) + '</div>' : '';
+            info.innerHTML = dnHTML + '<div class="card-shot-code">' + escapeHtml(shotName) + '</div>';
+            // Persist via existing API
+            if (typeof window.saveDisplayName === 'function') {
+                window.saveDisplayName(shotName, newName);
+            }
         });
     }
 
@@ -269,12 +349,18 @@ function closeVisualReorderModal() {
         visualReorderSortable.destroy();
         visualReorderSortable = null;
     }
-    // Clean up preview state
+    // Clean up preview and edit state
     previewMode = false;
+    editMode = false;
     visualCurrentShotName = null;
     restoreNavigationOverrides();
     var grid = document.getElementById('visual-reorder-grid');
     if (grid) grid.classList.remove('preview-mode');
+    if (grid) grid.classList.remove('edit-mode');
+    var etBtn = document.getElementById('visual-edit-toggle');
+    if (etBtn) {
+        etBtn.classList.remove('active');
+    }
     // Restore body scroll
     document.body.style.overflow = '';
 }
@@ -426,6 +512,7 @@ function visualNavigatePrev() {
 
 document.addEventListener('DOMContentLoaded', function() {
     ensurePreviewToggleBtn();
+    ensureEditToggleBtn();
 
     // Filter input
     var filter = document.getElementById('visual-reorder-filter');
@@ -468,3 +555,4 @@ window.closeVisualReorderModal = closeVisualReorderModal;
 window.saveVisualReorder = saveVisualReorder;
 window.switchVisualThumbType = switchVisualThumbType;
 window.togglePreviewMode = togglePreviewMode;
+window.toggleEditMode = toggleEditMode;
