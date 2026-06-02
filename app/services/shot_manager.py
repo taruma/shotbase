@@ -1127,12 +1127,20 @@ class ShotManager:
                         dst = videos_dir / f"{order:03d}_{shot_name}{display_suffix}{ext}"
                         shutil.copy2(src, dst)
 
+                if info['alt_video']['file']:
+                    src = Path(info['alt_video']['file'])
+                    if src.exists():
+                        ext = src.suffix
+                        dst = videos_dir / f"{order:03d}_{shot_name}{display_suffix}_alt{ext}"
+                        shutil.copy2(src, dst)
+
         # Generate metadata if requested
         if include_metadata:
             # Collect data for tables and notes
             first_data = []
             last_data = []
             video_data = []
+            alt_video_data = []
             notes_list = []
 
             for order, shot in enumerate(non_archived_shots, start=1):
@@ -1150,6 +1158,10 @@ class ShotManager:
                 # Video
                 if ('videos' in export_type or export_type == 'all') and (info['video']['caption'] or info['video']['prompt']):
                     video_data.append((order, shot_name, info['video']['caption'], info['video']['prompt']))
+
+                # Alt Video
+                if ('videos' in export_type or export_type == 'all') and (info['alt_video']['caption'] or info['alt_video']['prompt']):
+                    alt_video_data.append((order, shot_name, info['alt_video']['caption'], info['alt_video']['prompt']))
 
                 # Notes
                 if info['notes'].strip():
@@ -1209,6 +1221,17 @@ class ShotManager:
                     "|-------|-----------|----------|---------|"
                 ])
                 for order, name, caption, prompt in video_data:
+                    md_lines.append(f"| {order:03d} | {name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+                md_lines.append("")
+
+            # Alt Video table
+            if alt_video_data:
+                md_lines.extend([
+                    "## Alt Video",
+                    "| Order | Shot Name | Captions | Prompts |",
+                    "|-------|-----------|----------|---------|"
+                ])
+                for order, name, caption, prompt in alt_video_data:
                     md_lines.append(f"| {order:03d} | {name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
                 md_lines.append("")
 
