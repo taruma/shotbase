@@ -31,6 +31,7 @@
 
 .search-modal-content {
     padding: 24px 28px 20px 28px;
+    text-align: left;
 }
 
 /* --- Search Input --- */
