@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img alt="Latest Release" src="https://img.shields.io/github/v/release/taruma/shotbuddy"/>
+  <img alt="Latest Release" src="https://img.shields.io/github/v/release/taruma/shotbase"/>
   <img alt="License" src="https://img.shields.io/badge/license-MIT-green.svg"/>
   <img alt="Python Version" src="https://img.shields.io/badge/python-3.13.1%2B-blue"/>
 </p>
@@ -26,9 +26,17 @@ ShotBase takes the chaos out of AI filmmaking. Instead of juggling countless gen
   <img src="https://github.com/user-attachments/assets/e7ce1616-8936-49e8-a3fa-45403cd92203" alt="ShotBase Main Interface with Table of Contents"/>
 </p>
 
-## ✨ Key Features (v3 Enhancements)
+## ✨ Key Features
 
 This version of ShotBase is packed with features designed to make your workflow faster and more organized.
+
+### 🆕 What's New in v4
+- **Shot Search** — Press Ctrl+Shift+F to search across all shots' prompts, captions, notes, and names. Filter by content type and archive status for quick shot discovery.
+- **Visual Reorder Grid** — Drag-and-drop shot sorting with a responsive 5-column layout, thumbnail type switching, video preview, and inline display name editing.
+- **Alternative Video Asset** — New `alt_video` type for storing reference footage, upscales, or any additional video variant alongside your main video.
+- **Export Enhancements** — Display name columns now included in markdown exports, alt video assets exported, and a new "Open Exports Folder" button for quick access.
+- **UI Polish** — Sticky header stays visible on scroll, browser tab shows dynamic project title, and the table of contents has a collapsible archived section.
+- **Performance** — Thumbnails generated lazily on first request, and version scans cached per shot for faster page loads.
 
 ### 🚀 Streamlined Project Management
 
@@ -54,7 +62,7 @@ This version of ShotBase is packed with features designed to make your workflow 
   <img src="https://github.com/user-attachments/assets/d1c0f1bb-d897-464b-bd07-0ca8559d9900" alt="Advanced Export Modal" width="500"/>
 - **Seamless Light/Dark Theme**: Switch between light and dark modes with a single click. Your preference is saved automatically for your next session.
   ![Light/Dark Theme Toggle](https://github.com/user-attachments/assets/ec2f3e5e-33a3-4200-89cc-eae3cf70f1c6)
-- **And much more**: Enjoy features like dynamic note fields that expand as you type, integrated asset captions, and quick access to recent projects.
+- **And much more**: Enjoy features like dynamic note fields that expand as you type, integrated asset captions, quick access to recent projects, shot search with Ctrl+Shift+F, visual drag-and-drop reorder grid, alternative video asset support, and sticky header.
 
 ## 🔧 Installation
 
@@ -63,7 +71,7 @@ Get started with ShotBase in just a few steps. Using `uv` is recommended for its
 1.  **Clone the Repository**
     *(We use a shallow clone to download faster)*
     ```bash
-    git clone --depth 1 https://github.com/taruma/shotbuddy.git
+    git clone --depth 1 https://github.com/taruma/shotbase.git
     cd shotbuddy
     ```
 
