@@ -1394,6 +1394,9 @@ function openFileDialog(shotName, fileType) {
 
 async function saveNotes(shotName, notes) {
     try {
+        const idx = shots.findIndex(s => s.name === shotName);
+        if (idx !== -1) shots[idx].notes = notes;
+
         const response = await fetch('/api/shots/notes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
