@@ -490,14 +490,14 @@ body.light {
 
 .recent-projects-section {
     margin-top: 30px;
-    max-width: 600px;
+    max-width: none;
     margin-left: auto;
     margin-right: auto;
 }
 
 .recent-projects-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 10px;
 }
 
