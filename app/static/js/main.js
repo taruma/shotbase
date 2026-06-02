@@ -816,6 +816,7 @@ function createShotRow(shot) {
                 ${createDropZone(shot, 'first_image')}
                 ${createDropZone(shot, 'last_image')}
                 ${createDropZone(shot, 'video')}
+                ${createDropZone(shot, 'alt_video')}
                 ${'' /* createLipsyncZone(shot) */}
                 <div class="notes-cell">
                     <textarea class="notes-input" 
@@ -836,6 +837,7 @@ function displayAssetLabel(type) {
         case 'first_image': return 'First Frame';
         case 'last_image': return 'Last Frame';
         case 'video': return 'Video';
+        case 'alt_video': return 'Alt Video';
         default:
             return type.charAt(0).toUpperCase() + type.slice(1);
     }
@@ -848,7 +850,7 @@ function createDropZone(shot, type) {
     const hasFile = maxVersion > 0 || currentVersion > 0;
 
     if (hasFile) {
-        const isVideo = type === 'video';
+        const isVideo = type === 'video' || type === 'alt_video';
         const thumbnailUrl = file.thumbnail ? `${file.thumbnail}?v=${Date.now()}` : null;
 
         let mediaHtml;
@@ -1023,6 +1025,7 @@ async function uploadFile(file, shotName, fileType) {
     if (fileType === 'first_image') dropZoneIndex = 2;
     else if (fileType === 'last_image') dropZoneIndex = 3;
     else if (fileType === 'video') dropZoneIndex = 4;
+    else if (fileType === 'alt_video') dropZoneIndex = 5;
     else return; // Invalid type
     const dropZone = row.children[dropZoneIndex];
     if (!dropZone || !dropZone.classList.contains('drop-zone')) {
@@ -1150,7 +1153,7 @@ function updateDropZoneForShot(shotName, assetType, shotData) {
     if (!shotRow) return;
 
     // Get the drop zone based on asset type - they appear in specific order after action-cell:
-    // [0] action-cell, [1] shot-name, [2] first_image, [3] last_image, [4] video, [5] notes
+    // [0] action-cell, [1] shot-name, [2] first_image, [3] last_image, [4] video, [5] alt_video, [6] notes
     let dropZone = null;
     if (assetType === 'first_image') {
         dropZone = shotRow.children[2]; // first child after action and name
@@ -1158,6 +1161,8 @@ function updateDropZoneForShot(shotName, assetType, shotData) {
         dropZone = shotRow.children[3];
     } else if (assetType === 'video') {
         dropZone = shotRow.children[4];
+    } else if (assetType === 'alt_video') {
+        dropZone = shotRow.children[5];
     }
 
     if (!dropZone || !dropZone.classList.contains('drop-zone')) return;
@@ -1207,6 +1212,7 @@ function replaceDropZoneForShot(shotName, assetType, shotData) {
     if (assetType === 'first_image') dropZoneIndex = 2;
     else if (assetType === 'last_image') dropZoneIndex = 3;
     else if (assetType === 'video') dropZoneIndex = 4;
+    else if (assetType === 'alt_video') dropZoneIndex = 5;
     else return;
 
     const oldDropZone = shotRow.children[dropZoneIndex];
@@ -1334,7 +1340,7 @@ function openFileDialog(shotName, fileType) {
     input.type = 'file';
     if (fileType === 'first_image' || fileType === 'last_image' || fileType === 'image') {
         input.accept = 'image/*';
-    } else if (fileType === 'video') {
+    } else if (fileType === 'video' || fileType === 'alt_video') {
         input.accept = 'video/*';
     }
     input.style.display = 'none';

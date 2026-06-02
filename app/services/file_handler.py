@@ -49,7 +49,7 @@ class FileHandler:
 
         # Normalize/validate file type and extension
         is_image_type = file_type in {'image', 'first_image', 'last_image'}
-        is_video_type = file_type == 'video'
+        is_video_type = file_type in {'video', 'alt_video'}
         is_lipsync_type = file_type in {'driver', 'target', 'result'}
 
         if is_image_type and file_ext not in ALLOWED_IMAGE_EXTENSIONS:
@@ -114,7 +114,7 @@ class FileHandler:
 
         elif is_video_type:
             wip_dir = shot_dir / 'videos'
-            base = shot_name
+            base = f'{shot_name}_alt' if file_type == 'alt_video' else shot_name
             version = self.get_next_version(wip_dir, base, file_ext)
 
             wip_filename = f'{base}_v{version:03d}{file_ext}'
@@ -131,7 +131,7 @@ class FileHandler:
             shutil.copy2(str(wip_path), str(final_path))
             # Update current version marker so UI shows the promoted version correctly
             try:
-                manager.set_current_version(shot_name, 'video', version)
+                manager.set_current_version(shot_name, file_type, version)
             except Exception as e:
                 logger.warning("Failed to set current version marker: %s", e)
 

@@ -226,10 +226,16 @@ class ShotManager:
             src = self.latest_videos_dir / f"{old_name}{ext}"
             if src.exists():
                 src.rename(self.latest_videos_dir / f"{new_name}{ext}")
-        # Rename video version marker if present
+            alt_src = self.latest_videos_dir / f"{old_name}_alt{ext}"
+            if alt_src.exists():
+                alt_src.rename(self.latest_videos_dir / f"{new_name}_alt{ext}")
+        # Rename video version markers if present
         vid_marker = self.latest_videos_dir / f"{old_name}.version"
         if vid_marker.exists():
             vid_marker.rename(self.latest_videos_dir / f"{new_name}.version")
+        alt_vid_marker = self.latest_videos_dir / f"{old_name}_alt.version"
+        if alt_vid_marker.exists():
+            alt_vid_marker.rename(self.latest_videos_dir / f"{new_name}_alt.version")
 
         if self.thumbnail_cache_dir.exists():
             for thumb in self.thumbnail_cache_dir.glob(f"{old_name}_*_thumb.jpg"):
@@ -511,6 +517,22 @@ class ShotManager:
         if current_video_version > 0:
             video_prompt = self.load_prompt(shot_name, 'video', current_video_version)
 
+        # Alt video
+        latest_alt_video, max_alt_video_version = self._get_latest_asset(
+            self.latest_videos_dir, shot_dir / 'videos',
+            f'{shot_name}_alt', ALLOWED_VIDEO_EXTENSIONS
+        )
+        
+        if max_alt_video_version == 0:
+            detected_alt_video_versions = self._detect_existing_versions(shot_name, 'alt_video')
+            max_alt_video_version = max(max_alt_video_version, detected_alt_video_versions)
+            
+        latest_alt_video = self._normalize_path(latest_alt_video)
+        current_alt_video_version = self.get_current_version(shot_name, 'alt_video', max_alt_video_version)
+        alt_video_prompt = ''
+        if current_alt_video_version > 0:
+            alt_video_prompt = self.load_prompt(shot_name, 'alt_video', current_alt_video_version)
+
         # Lipsync videos
         lipsync_dir = shot_dir / 'lipsync'
         lipsync = {}
@@ -534,6 +556,7 @@ class ShotManager:
         first_thumb = self.get_thumbnail_path(Path(first_image_path), shot_name) if first_image_path else None
         last_thumb = self.get_thumbnail_path(Path(last_image_path), shot_name) if last_image_path else None
         video_thumb = self.get_video_thumbnail_path(Path(latest_video), shot_name) if latest_video else None
+        alt_video_thumb = self.get_video_thumbnail_path(Path(latest_alt_video), f"{shot_name}_alt") if latest_alt_video else None
 
         for part_name, info in lipsync.items():
             info['thumbnail'] = self.get_video_thumbnail_path(Path(info['file']), f"{shot_name}_{part_name}") if info['file'] else None
@@ -577,6 +600,14 @@ class ShotManager:
                 'thumbnail': video_thumb,
                 'prompt': video_prompt,
                 'caption': captions.get('video', ''),
+            },
+            'alt_video': {
+                'file': latest_alt_video,
+                'current_version': current_alt_video_version,
+                'max_version': max_alt_video_version,
+                'thumbnail': alt_video_thumb,
+                'prompt': alt_video_prompt,
+                'caption': captions.get('alt_video', ''),
             },
             'lipsync': lipsync,
             'archived': (shot_name in self._load_archived())
@@ -628,6 +659,9 @@ class ShotManager:
         elif asset_type == 'video':
             wip_dir = shot_dir / 'videos'
             patterns = [f'{shot_name}_v*.*']
+        elif asset_type == 'alt_video':
+            wip_dir = shot_dir / 'videos'
+            patterns = [f'{shot_name}_alt_v*.*']
         else:
             return 0  # Unsupported asset type
 
@@ -661,6 +695,8 @@ class ShotManager:
             return self.latest_images_dir / f"{shot_name}_last.version"
         elif asset_type == 'video':
             return self.latest_videos_dir / f"{shot_name}.version"
+        elif asset_type == 'alt_video':
+            return self.latest_videos_dir / f"{shot_name}_alt.version"
         elif asset_type in {'driver', 'target', 'result'}:
             return (self.wip_dir / shot_name / 'lipsync') / f"{shot_name}_{asset_type}.version"
         else:
@@ -703,7 +739,7 @@ class ShotManager:
     def promote_asset(self, shot_name, asset_type, version):
         """Promote a specific WIP version to be the current final for image variants/video."""
         validate_shot_name(shot_name)
-        if asset_type not in {'image', 'first_image', 'last_image', 'video'}:
+        if asset_type not in {'image', 'first_image', 'last_image', 'video', 'alt_video'}:
             raise ValueError('Invalid asset type')
 
         shot_dir = self.wip_dir / shot_name
@@ -759,43 +795,46 @@ class ShotManager:
             _ = self.get_thumbnail_path(final_path, shot_name)
             return self._normalize_path(final_path)
 
-        # Video
+        # Video & Alt Video
         wip_dir = shot_dir / 'videos'
         if not wip_dir.exists():
             raise ValueError(f"No video WIP directory for shot {shot_name}")
 
+        is_alt = (asset_type == 'alt_video')
+        base_prefix = f'{shot_name}_alt' if is_alt else shot_name
+
         src = None
         for ext in ALLOWED_VIDEO_EXTENSIONS:
-            candidate = wip_dir / f'{shot_name}_v{int(version):03d}{ext}'
+            candidate = wip_dir / f'{base_prefix}_v{int(version):03d}{ext}'
             if candidate.exists():
                 src = candidate
                 break
         if not src:
-            raise ValueError(f"Version v{int(version):03d} not found for {shot_name} video")
+            raise ValueError(f"Version v{int(version):03d} not found for {shot_name} {asset_type}")
 
         final_dir = self.latest_videos_dir
         final_dir.mkdir(parents=True, exist_ok=True)
 
-        for existing in final_dir.glob(f"{shot_name}.*"):
+        for existing in final_dir.glob(f"{base_prefix}.*"):
             try:
                 existing.unlink()
             except Exception:
                 logger.exception("Error unlinking existing final video")
 
-        final_path = final_dir / f"{shot_name}{src.suffix}"
+        final_path = final_dir / f"{base_prefix}{src.suffix}"
         _shutil.copy2(str(src), str(final_path))
 
-        self.set_current_version(shot_name, 'video', int(version))
+        self.set_current_version(shot_name, asset_type, int(version))
         try:
             final_stem = Path(final_path).stem
-            thumb_filename = f"{shot_name}_{final_stem}_vthumb.jpg"
+            thumb_filename = f"{base_prefix}_{final_stem}_vthumb.jpg"
             old_thumb = self.thumbnail_cache_dir / thumb_filename
             if old_thumb.exists():
                 old_thumb.unlink()
         except Exception:
             logger.exception("Error unlinking old video thumbnail")
 
-        _ = self.get_video_thumbnail_path(final_path, shot_name)
+        _ = self.get_video_thumbnail_path(final_path, base_prefix)
         return self._normalize_path(final_path)
 
     def save_shot_notes(self, shot_name, notes):
@@ -834,7 +873,7 @@ class ShotManager:
     def save_caption(self, shot_name, asset_type, caption):
         """Persist caption text for given asset type for a shot."""
         validate_shot_name(shot_name)
-        if asset_type not in {'first_image', 'last_image', 'video'}:
+        if asset_type not in {'first_image', 'last_image', 'video', 'alt_video'}:
             raise ValueError('Invalid asset type')
         shot_dir = self.wip_dir / shot_name
         if not shot_dir.exists():
@@ -863,6 +902,9 @@ class ShotManager:
         elif asset_type == 'video':
             base_dir = shot_dir / 'videos'
             filename = f'{shot_name}_v{version:03d}_video_prompt.txt'
+        elif asset_type == 'alt_video':
+            base_dir = shot_dir / 'videos'
+            filename = f'{shot_name}_alt_v{version:03d}_video_prompt.txt'
         elif asset_type in {'driver', 'target', 'result'}:
             base_dir = shot_dir / 'lipsync'
             filename = f'{shot_name}_{asset_type}_v{version:03d}_prompt.txt'
@@ -918,6 +960,9 @@ class ShotManager:
         elif asset_type == 'video':
             base_dir = shot_dir / 'videos'
             patterns = [f'{shot_name}_v*_video_prompt.txt']
+        elif asset_type == 'alt_video':
+            base_dir = shot_dir / 'videos'
+            patterns = [f'{shot_name}_alt_v*_video_prompt.txt']
         elif asset_type in {'driver', 'target', 'result'}:
             base_dir = shot_dir / 'lipsync'
             patterns = [f'{shot_name}_{asset_type}_v*_prompt.txt']

@@ -220,7 +220,7 @@ body {
 .grid-header {
     background: #2a2a2a;
     display: grid;
-    grid-template-columns: 32px 140px 110px 110px 110px 1fr;
+    grid-template-columns: 32px 140px 110px 110px 110px 110px 1fr;
     /* Actions + existing columns */
     align-items: center;
     /* Align content to center */
@@ -239,7 +239,7 @@ body {
 
 .shot-row {
     display: grid;
-    grid-template-columns: 32px 140px 110px 110px 110px 1fr;
+    grid-template-columns: 32px 140px 110px 110px 110px 110px 1fr;
     /* Actions + existing columns */
     border-bottom: 1px solid #404040;
     align-items: center;
