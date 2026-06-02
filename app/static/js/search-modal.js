@@ -537,16 +537,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Close modal when clicking outside the content
-    var searchModal = document.getElementById('search-modal');
-    if (searchModal) {
-        searchModal.addEventListener('click', function (e) {
-            if (e.target === searchModal) {
-                closeSearchModal();
-            }
-        });
-    }
-
     // Global keyboard shortcut: Ctrl+Shift+F / Cmd+Shift+F to open search
     document.addEventListener('keydown', function (e) {
         if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {

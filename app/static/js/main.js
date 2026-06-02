@@ -1874,14 +1874,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Close modal when clicking outside
-    document.addEventListener('click', function (event) {
-        const modal = document.getElementById('reorder-modal');
-        if (modal && event.target === modal) {
-            closeReorderModal();
-        }
-    });
-
     // Back to Top Button functionality
     const backToTopButton = document.getElementById('backToTop');
 
@@ -2398,34 +2390,6 @@ function closeImageModal() {
     document.removeEventListener('keydown', handleImageModalKeydown);
 }
 
-// Close video modal when clicking outside
-document.addEventListener('click', function (event) {
-    const videoModal = document.getElementById('video-modal');
-    if (event.target === videoModal) {
-        closeVideoModal();
-    }
-});
-
-// Close video modal with Escape key
-document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-        const videoModal = document.getElementById('video-modal');
-        const imageModal = document.getElementById('image-modal');
-        if (videoModal.style.display === 'flex') {
-            closeVideoModal();
-        } else if (imageModal.style.display === 'flex') {
-            closeImageModal();
-        }
-    }
-});
-
-// Close image modal when clicking outside
-document.addEventListener('click', function (event) {
-    const imageModal = document.getElementById('image-modal');
-    if (event.target === imageModal) {
-        closeImageModal();
-    }
-});
 
 // Expose image functions globally
 window.showImage = showImage;

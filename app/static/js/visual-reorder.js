@@ -529,24 +529,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     }
-
-    // Click outside modal to close
-    document.addEventListener('click', function(e) {
-        var modal = document.getElementById('visual-reorder-modal');
-        if (modal && e.target === modal) {
-            closeVisualReorderModal();
-        }
-    });
-
-    // Escape key to close
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            var modal = document.getElementById('visual-reorder-modal');
-            if (modal && modal.style.display === 'flex') {
-                closeVisualReorderModal();
-            }
-        }
-    });
 });
 
 // Expose to global scope
