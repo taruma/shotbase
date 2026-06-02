@@ -1,0 +1,267 @@
+/* ============================================================
+   Visual Reorder Modal Styles
+   Self-contained module — no impact on existing main.css/styles.css
+   ============================================================ */
+
+/* Modal container */
+.visual-reorder-content {
+    width: 960px;
+    max-width: 95vw;
+    max-height: 90vh;
+    text-align: left;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+/* Thumbnail type selector row */
+.visual-reorder-thumbnail-selector {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.visual-reorder-thumbnail-selector .pill-button {
+    padding: 6px 14px;
+    background: #3a3a3a;
+    color: #e5e5e5;
+    border: 1px solid #555;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    user-select: none;
+}
+
+.visual-reorder-thumbnail-selector .pill-button:hover {
+    background: #505050;
+}
+
+.visual-reorder-thumbnail-selector .pill-button.active {
+    background: #00c851;
+    color: #1a1a1a;
+    border-color: #00c851;
+    font-weight: 600;
+}
+
+/* Filter input */
+#visual-reorder-filter {
+    margin-bottom: 16px;
+}
+
+/* Grid layout */
+.visual-reorder-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    max-height: 55vh;
+    overflow-y: auto;
+    padding: 2px; /* room for drag outline */
+    margin-bottom: 20px;
+}
+
+@media (max-width: 900px) {
+    .visual-reorder-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .visual-reorder-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* Empty state */
+.visual-reorder-grid-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 40px 20px;
+    color: #808080;
+    font-size: 14px;
+}
+
+/* Card */
+.visual-reorder-card {
+    position: relative;
+    background: #2a2a2a;
+    border: 2px solid #404040;
+    border-radius: 8px;
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: border-color 0.15s, transform 0.15s;
+    user-select: none;
+}
+
+.visual-reorder-card:active {
+    cursor: grabbing;
+}
+
+.visual-reorder-card:hover {
+    border-color: #6b6b6b;
+}
+
+/* Order number badge */
+.card-number {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: #00c851;
+    color: #1a1a1a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Thumbnail wrapper */
+.card-thumb-wrapper {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    width: 100%;
+    background: #1a1a1a;
+    overflow: hidden;
+}
+
+.card-thumb-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.card-thumb-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    font-size: 12px;
+    padding: 8px;
+    text-align: center;
+}
+
+/* Card info (labels below thumbnail) */
+.card-info {
+    padding: 8px 10px;
+    text-align: center;
+    min-height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-display-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e5e5e5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    line-height: 1.3;
+}
+
+.card-shot-code {
+    font-size: 11px;
+    color: #808080;
+    margin-top: 2px;
+    line-height: 1.2;
+}
+
+/* ============================================================
+   SortableJS drag state classes
+   ============================================================ */
+.visual-reorder-ghost {
+    opacity: 0.5;
+    background: rgba(0, 200, 81, 0.12) !important;
+    border: 2px dashed #00c851 !important;
+}
+
+.visual-reorder-chosen {
+    background: #333 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.visual-reorder-drag {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5) !important;
+    border-left: 3px solid #00c851 !important;
+}
+
+/* ============================================================
+   Light theme overrides
+   ============================================================ */
+.light .visual-reorder-content {
+    background: #ffffff;
+    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+}
+
+.light .visual-reorder-thumbnail-selector .pill-button {
+    background: #e8e8e8;
+    color: #333;
+    border-color: #ccc;
+}
+
+.light .visual-reorder-thumbnail-selector .pill-button:hover {
+    background: #d5d5d5;
+}
+
+.light .visual-reorder-thumbnail-selector .pill-button.active {
+    background: #00c851;
+    color: #1a1a1a;
+    border-color: #00c851;
+}
+
+.light .visual-reorder-card {
+    background: #f5f5f5;
+    border-color: #ddd;
+}
+
+.light .visual-reorder-card:hover {
+    border-color: #bbb;
+}
+
+.light .card-thumb-wrapper {
+    background: #e8e8e8;
+}
+
+.light .card-thumb-placeholder {
+    color: #999;
+}
+
+.light .card-display-name {
+    color: #333;
+}
+
+.light .card-shot-code {
+    color: #888;
+}
+
+.light .visual-reorder-ghost {
+    background: rgba(0, 200, 81, 0.08) !important;
+    border: 2px dashed #00c851 !important;
+}
+
+.light .visual-reorder-chosen {
+    background: #e8e8e8 !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.light .visual-reorder-drag {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15) !important;
+}
+
+.light .visual-reorder-grid-empty {
+    color: #999;
+}
+
+.light .visual-reorder-content .close-modal {
+    color: #333;
+}

@@ -7,6 +7,7 @@
     <title>ShotBase</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/visual-reorder.css') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='icons/favicon-16x16.png') }}">
@@ -105,6 +106,14 @@
                                 <path d="M16 7l-5 5 5 5"></path>
                             </svg>
                         </button>
+                        <button class="dark-button icon-button" onclick="openVisualReorderModal()" title="Visual Reorder" aria-label="Visual Reorder Shots">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                                <rect x="14" y="14" width="7" height="7" rx="1"/>
+                            </svg>
+                        </button>
                         <button class="green-button icon-button has-text" onclick="addNewShot()" title="Add New Shot" aria-label="Add New Shot">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="12" y1="5" x2="12" y2="19"></line>
@@ -190,6 +199,28 @@
             <div class="modal-buttons">
                 <button class="dark-button" onclick="saveReorder()">Save</button>
                 <button class="dark-button" onclick="closeReorderModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visual Reorder Modal -->
+    <div id="visual-reorder-modal" class="modal">
+        <div class="modal-content visual-reorder-content">
+            <div class="modal-header">
+                <h3>Visual Reorder</h3>
+                <button class="close-modal" onclick="closeVisualReorderModal()">&times;</button>
+            </div>
+            <div class="visual-reorder-thumbnail-selector">
+                <button class="pill-button active" data-thumb-type="video" onclick="switchVisualThumbType('video', this)">Video</button>
+                <button class="pill-button" data-thumb-type="first_image" onclick="switchVisualThumbType('first_image', this)">First Frame</button>
+                <button class="pill-button" data-thumb-type="last_image" onclick="switchVisualThumbType('last_image', this)">Last Frame</button>
+                <button class="pill-button" data-thumb-type="alt_video" onclick="switchVisualThumbType('alt_video', this)">Alt Video</button>
+            </div>
+            <input id="visual-reorder-filter" type="text" class="toc-filter" placeholder="Filter shots...">
+            <div id="visual-reorder-grid" class="visual-reorder-grid"></div>
+            <div class="modal-buttons">
+                <button class="green-button" onclick="saveVisualReorder()">Save</button>
+                <button class="dark-button" onclick="closeVisualReorderModal()">Cancel</button>
             </div>
         </div>
     </div>
@@ -354,5 +385,6 @@
     
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/visual-reorder.js') }}"></script>
 </body>
 </html>
