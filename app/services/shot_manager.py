@@ -312,7 +312,9 @@ class ShotManager:
         else:
             shot_dirs = sorted(shot_dirs, key=lambda d: d.name)
 
-        shots = [self.get_shot_info(shot_dir.name) for shot_dir in shot_dirs]
+        # Cache archived set once so get_shot_info() doesn't re-read from disk per shot
+        archived_names = self._load_archived()
+        shots = [self.get_shot_info(shot_dir.name, archived_names=archived_names) for shot_dir in shot_dirs]
         return shots
 
     def save_shot_order(self, shot_order):
@@ -444,7 +446,21 @@ class ShotManager:
         except Exception as e:
             raise ValueError(f"Failed to save display name: {str(e)}")
 
-    def get_shot_info(self, shot_name):
+    @staticmethod
+    def _thumbnail_url(asset_path, shot_name, is_video=False):
+        """Compute thumbnail URL without generating the file (lazy).
+
+        Returns the URL path that the thumbnail *would* have, based solely on
+        the source asset stem and shot name.  Actual generation is deferred to
+        the first request through ``/api/shots/thumbnail/``.
+        """
+        if not asset_path:
+            return None
+        p = Path(asset_path)
+        suffix = "_vthumb" if is_video else "_thumb"
+        return f"/api/shots/thumbnail/{shot_name}_{p.stem}{suffix}.jpg"
+
+    def get_shot_info(self, shot_name, archived_names=None):
         """Get information about a specific shot."""
         validate_shot_name(shot_name)
         shot_dir = self.wip_dir / shot_name
@@ -552,18 +568,14 @@ class ShotManager:
                 'prompt': prompt_text,
             }
 
-        # Thumbnails
-        first_thumb = self.get_thumbnail_path(Path(first_image_path), shot_name) if first_image_path else None
-        last_thumb = self.get_thumbnail_path(Path(last_image_path), shot_name) if last_image_path else None
-        video_thumb = self.get_video_thumbnail_path(Path(latest_video), shot_name) if latest_video else None
-        alt_video_thumb = self.get_video_thumbnail_path(Path(latest_alt_video), f"{shot_name}_alt") if latest_alt_video else None
+        # Thumbnails — lazy: compute URL path only; generation deferred to first browser request
+        first_thumb = self._thumbnail_url(first_image_path, shot_name, is_video=False) if first_image_path else None
+        last_thumb = self._thumbnail_url(last_image_path, shot_name, is_video=False) if last_image_path else None
+        video_thumb = self._thumbnail_url(latest_video, shot_name, is_video=True) if latest_video else None
+        alt_video_thumb = self._thumbnail_url(latest_alt_video, f"{shot_name}_alt", is_video=True) if latest_alt_video else None
 
         for part_name, info in lipsync.items():
-            info['thumbnail'] = self.get_video_thumbnail_path(Path(info['file']), f"{shot_name}_{part_name}") if info['file'] else None
-
-        logger.debug("%s -> First image thumbnail: %s", shot_name, first_thumb)
-        logger.debug("%s -> Last image thumbnail: %s", shot_name, last_thumb)
-        logger.debug("%s -> Video thumbnail: %s", shot_name, video_thumb)
+            info['thumbnail'] = self._thumbnail_url(info['file'], f"{shot_name}_{part_name}", is_video=True) if info['file'] else None
 
         captions = self.load_captions(shot_name)
 
@@ -610,7 +622,7 @@ class ShotManager:
                 'caption': captions.get('alt_video', ''),
             },
             'lipsync': lipsync,
-            'archived': (shot_name in self._load_archived())
+            'archived': (shot_name in (archived_names if archived_names is not None else self._load_archived()))
         }
 
 
@@ -983,6 +995,62 @@ class ShotManager:
                     except (IndexError, ValueError):
                         continue
         return sorted(versions)
+
+    def _generate_thumbnail_on_demand(self, thumb_filename):
+        """Ensure a thumbnail exists and is fresh.
+
+        Called by ``serve_thumbnail`` to generate or refresh the thumbnail
+        for the given filename.  Parses the filename to reconstruct the
+        source asset path, then delegates to ``get_thumbnail_path`` or
+        ``get_video_thumbnail_path``.  Those methods already compare
+        source-vs-thumb mtimes internally, so stale thumbs for replaced
+        assets are automatically regenerated.
+        """
+        stem = Path(thumb_filename).stem  # e.g. "SH001_SH001_first_thumb" or "SH001_SH001_vthumb"
+
+        is_video = stem.endswith("_vthumb")
+        if is_video:
+            stem = stem[:-len("_vthumb")]   # "SH001_SH001"
+        else:
+            if stem.endswith("_thumb"):
+                stem = stem[:-len("_thumb")]  # "SH001_SH001_first"
+
+        # stem is now "{shot_name}_{asset_stem}" where asset_stem may
+        # be just the shot name (promoted video / legacy image), or
+        # "{shot_name}_first", "{shot_name}_last", "{shot_name}_alt",
+        # "{shot_name}_driver", etc.
+        shot_name = stem.split("_", 1)[0]
+
+        # Locate the source file by scanning the project directories
+        shot_dir = self.wip_dir / shot_name
+
+        # Try in latest dirs first, then WIP
+        search_dirs = []
+        if is_video:
+            search_dirs = [
+                self.latest_videos_dir,
+                shot_dir / "videos",
+                shot_dir / "lipsync",
+            ]
+        else:
+            search_dirs = [
+                self.latest_images_dir,
+                shot_dir / "images",
+            ]
+
+        for d in search_dirs:
+            if not d.exists():
+                continue
+            for f in d.iterdir():
+                if not f.is_file():
+                    continue
+                expected_thumb = f"{shot_name}_{f.stem}_vthumb.jpg" if is_video else f"{shot_name}_{f.stem}_thumb.jpg"
+                if expected_thumb == thumb_filename:
+                    if is_video:
+                        self.get_video_thumbnail_path(f, shot_name)
+                    else:
+                        self.get_thumbnail_path(f, shot_name)
+                    return
 
     def get_thumbnail_path(self, image_path, shot_name):
         """Return (and create if necessary) the thumbnail for an image."""

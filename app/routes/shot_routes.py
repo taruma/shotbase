@@ -274,7 +274,11 @@ def create_shot_between():
 
 @shot_bp.route("/thumbnail/<path:filepath>")
 def serve_thumbnail(filepath):
-    """Serve a thumbnail from the current project's cache directory."""
+    """Serve a thumbnail from the current project's cache directory.
+
+    If the thumbnail doesn't exist yet it is generated on-the-fly (lazy
+    generation) using the existing ``ShotManager`` generation methods.
+    """
     try:
         project_manager = current_app.config['PROJECT_MANAGER']
         project = project_manager.get_current_project()
@@ -282,10 +286,16 @@ def serve_thumbnail(filepath):
             return "No current project", 400
 
         thumb_dir = get_project_thumbnail_cache_dir(project["path"]).resolve()
-        thumb_path = (thumb_dir / Path(filepath).name).resolve()
+        thumb_filename = Path(filepath).name
+        thumb_path = (thumb_dir / thumb_filename).resolve()
 
         if not str(thumb_path).startswith(str(thumb_dir)):
             return "Invalid path", 400
+
+        # Lazy generation: if the thumb doesn't exist yet, create it now
+        if not thumb_path.is_file():
+            shot_manager = get_shot_manager(project["path"])
+            shot_manager._generate_thumbnail_on_demand(thumb_filename)
 
         if thumb_path.is_file():
             resp = send_file(str(thumb_path))
