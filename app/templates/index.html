@@ -78,13 +78,13 @@
                         <div id="project-subtitle" class="project-subtitle"></div>
                     </div>
                     <div class="header-controls">
-                        <button class="dark-button icon-button" onclick="openShotsFolder()" title="Open Project Shots Folder" aria-label="Open Project Shots Folder">
-                            <img src="{{ url_for('static', filename='icons/folder_24.png') }}" alt="Open Project Shots Folder" />
-                        </button>
-                        <button class="dark-button icon-button" onclick="showSetupScreen()" title="Back to Menu" aria-label="Back to Menu">
+                        <button class="menu-button icon-button" onclick="showSetupScreen()" title="Back to Menu" aria-label="Back to Menu">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3"></path>
                             </svg>
+                        </button>
+                        <button class="dark-button icon-button" onclick="openShotsFolder()" title="Open Project Shots Folder" aria-label="Open Project Shots Folder">
+                            <img src="{{ url_for('static', filename='icons/folder_24.png') }}" alt="Open Project Shots Folder" />
                         </button>
                         <button class="dark-button icon-button" onclick="openProjectInfoModal()" title="Project Information" aria-label="Project Information">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

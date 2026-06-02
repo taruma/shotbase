@@ -73,6 +73,25 @@ body {
     background: #505050;
 }
 
+/* Menu Button - blue accent for the Back to Menu / home button */
+.menu-button {
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #4a6fa5;
+    color: #e5e5e5;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.menu-button:hover {
+    background: #5a85c0;
+}
+
 .icon-button {
     padding: 8px 10px;
     display: flex;
