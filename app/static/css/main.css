@@ -220,7 +220,7 @@ body {
 .grid-header {
     background: #2a2a2a;
     display: grid;
-    grid-template-columns: 40px 180px 160px 160px 160px 1fr;
+    grid-template-columns: 32px 140px 110px 110px 110px 1fr;
     /* Actions + existing columns */
     align-items: center;
     /* Align content to center */
@@ -230,16 +230,16 @@ body {
 .grid-header-cell {
     justify-content: flex-start;
     text-align: center;
-    padding: 16px;
+    padding: 10px;
     font-weight: 600;
-    font-size: 16px;
+    font-size: 14px;
     color: #b5b5b5;
     white-space: normal;
 }
 
 .shot-row {
     display: grid;
-    grid-template-columns: 40px 180px 160px 160px 160px 1fr;
+    grid-template-columns: 32px 140px 110px 110px 110px 1fr;
     /* Actions + existing columns */
     border-bottom: 1px solid #404040;
     align-items: center;
@@ -255,9 +255,9 @@ body {
 }
 
 .shot-name {
-    padding: 16px;
+    padding: 10px;
     font-weight: 500;
-    font-size: 16px;
+    font-size: 14px;
     display: flex;
     align-items: center;
     cursor: grab;
@@ -315,7 +315,7 @@ body {
 /* Drop Zones */
 .drop-zone {
     padding: 0;
-    margin: 10px;
+    margin: 6px;
     display: flex;
     align-items: center;
     justify-content: flex-start;
@@ -595,24 +595,24 @@ body {
 .notes-cell {
     justify-content: flex-start !important;
     text-align: left;
-    padding: 16px;
+    padding: 10px;
     display: flex;
     align-items: stretch;
 }
 
 .notes-input {
     height: auto;
-    min-height: 100px;
+    min-height: 60px;
     max-height: none;
     overflow-y: hidden;
     width: 100%;
     background: #2a2a2a;
     border: 1px solid #404040;
     border-radius: 6px;
-    padding: 12px;
+    padding: 8px;
     color: #e5e5e5;
     font-family: inherit;
-    font-size: 14px;
+    font-size: 13px;
     resize: none;
     transition: border-color 0.2s, background 0.2s;
 }
