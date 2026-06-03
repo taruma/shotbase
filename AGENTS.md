@@ -70,7 +70,6 @@ shotbuddy/
 │   │   ├── shot_manager.py     # Core shot operations
 │   │   ├── project_manager.py  # Project state, recent projects, info CRUD
 │   │   ├── file_handler.py     # Uploads and asset processing
-│   │   └── prompt_importer.py  # PNG metadata prompt extraction (A1111/ComfyUI)
 │   ├── config/            # Configuration (constants.py)
 │   └── static/            # Static assets
 │       ├── css/           # main.css, styles.css, search-modal.css, visual-reorder.css
@@ -216,9 +215,6 @@ project_routes.py ──→ ProjectManager (singleton, per-app)
 shot_routes.py ──→ get_shot_manager(path) ──→ ShotManager (cached per project path)
                           │                         │
                      FileHandler ────→ ShotManager   │
-                          │                         │
-                     prompt_importer.py              │
-                     (extract_prompt_from_png)       │
                                                      │
                                           ┌──────────┘
                                           ├── Pillow (thumbnails, lazy generation)
@@ -229,7 +225,7 @@ shot_routes.py ──→ get_shot_manager(path) ──→ ShotManager (cached pe
 
 ### Side Effects of Common Operations
 - **Creating a shot**: creates `shots/wip/SH###/` with `images/`, `videos/` subdirs; creates shot order entry; updates project timestamp
-- **Uploading an asset**: saves to `wip/SH###/images/` or `videos/` with version suffix; copies to `latest_images/` or `latest_videos/`; lazy thumbnail URL computed (generated on first request); extracts PNG prompts; updates version marker
+- **Uploading an asset**: saves to `wip/SH###/images/` or `videos/` with version suffix; copies to `latest_images/` or `latest_videos/`; lazy thumbnail URL computed (generated on first request); updates version marker
 - **Promoting an asset**: copies WIP version → latest dir; updates `.version` marker; thumbnail regenerated on next request
 - **Archiving a shot**: toggles entry in `.archived_shots.json`
 

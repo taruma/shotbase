@@ -10,7 +10,6 @@ from app.config.constants import (
     THUMBNAIL_SIZE,
     get_project_thumbnail_cache_dir,
 )
-from app.services.prompt_importer import extract_prompt_from_png
 from app.services.shot_manager import get_shot_manager
 
 logger = logging.getLogger(__name__)
@@ -91,22 +90,6 @@ class FileHandler:
                 manager.set_current_version(shot_name, canonical_type, version)
             except Exception as e:
                 logger.warning("Failed to set current version marker: %s", e)
-
-            # Attempt to extract embedded prompt metadata from PNG files
-            if file_ext == '.png':
-                prompt_data = extract_prompt_from_png(final_path)
-                if prompt_data and prompt_data.get('prompt'):
-                    prompt_text = prompt_data['prompt'].strip()
-                    neg = prompt_data.get('negative_prompt', '').strip()
-                    if neg:
-                        prompt_text += f"\n\nNegative: {neg}"
-                    try:
-                        manager.save_prompt(shot_name, canonical_type, version, prompt_text)
-                        logger.info("Imported prompt from metadata for %s", final_path)
-                    except Exception as e:
-                        logger.warning('Failed to save imported prompt: %s', e)
-                else:
-                    logger.info("No embedded prompt found in %s", final_path)
 
             # Thumbnails for images
             thumbnail_path = self.create_thumbnail(str(final_path), shot_name)

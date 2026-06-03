@@ -1,5 +1,10 @@
 # Changelog
 
+## v4.0.1 (June 3, 2026) - by Taruma Sakti
+
+### Removed
+- **PNG Prompt Auto-Import**: Removed the `prompt_importer.py` module that attempted to extract embedded A1111/ComfyUI generation parameters from uploaded PNGs. The feature was untested and not part of the maintainer's workflow (prompts are pasted manually). The manual prompt saving endpoint (`POST /api/shots/prompt`) is unaffected.
+
 ## v4.0.0 (June 3, 2026) - by Taruma Sakti
 
 This major release rebrands the project from Shotbuddy to **ShotBase**, introduces shot search and visual reorder modals, adds alternative video asset support, and delivers a refined UI with performance improvements across the board.
