@@ -274,7 +274,11 @@ def create_shot_between():
 
 @shot_bp.route("/thumbnail/<path:filepath>")
 def serve_thumbnail(filepath):
-    """Serve a thumbnail from the current project's cache directory."""
+    """Serve a thumbnail from the current project's cache directory.
+
+    If the thumbnail doesn't exist yet it is generated on-the-fly (lazy
+    generation) using the existing ``ShotManager`` generation methods.
+    """
     try:
         project_manager = current_app.config['PROJECT_MANAGER']
         project = project_manager.get_current_project()
@@ -282,10 +286,16 @@ def serve_thumbnail(filepath):
             return "No current project", 400
 
         thumb_dir = get_project_thumbnail_cache_dir(project["path"]).resolve()
-        thumb_path = (thumb_dir / Path(filepath).name).resolve()
+        thumb_filename = Path(filepath).name
+        thumb_path = (thumb_dir / thumb_filename).resolve()
 
         if not str(thumb_path).startswith(str(thumb_dir)):
             return "Invalid path", 400
+
+        # Lazy generation: if the thumb doesn't exist yet, create it now
+        if not thumb_path.is_file():
+            shot_manager = get_shot_manager(project["path"])
+            shot_manager._generate_thumbnail_on_demand(thumb_filename)
 
         if thumb_path.is_file():
             resp = send_file(str(thumb_path))
@@ -373,6 +383,42 @@ def open_shots_folder():
             xdg_path = shutil.which("xdg-open")
             if xdg_path:
                 subprocess.Popen([xdg_path, str(shots_path)], shell=False)  # noqa: S603
+            else:
+                raise FileNotFoundError("xdg-open not found")
+
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@shot_bp.route("/open-exports-folder", methods=["POST"])
+def open_exports_folder():
+    """Open the current project's exports folder in the file browser. Creates it if missing."""
+    try:
+        project_manager = current_app.config['PROJECT_MANAGER']
+        project = project_manager.get_current_project()
+        if not project:
+            return jsonify({"success": False, "error": "No current project"}), 400
+
+        exports_path = Path(project["path"]) / "exports"
+        exports_path.mkdir(exist_ok=True)
+
+        if platform.system() == "Windows":
+            explorer_path = shutil.which("explorer")
+            if explorer_path:
+                subprocess.Popen([explorer_path, str(exports_path)], shell=False)  # noqa: S603
+            else:
+                raise FileNotFoundError("explorer not found")
+        elif platform.system() == "Darwin":
+            open_path = shutil.which("open")
+            if open_path:
+                subprocess.Popen([open_path, str(exports_path)], shell=False)  # noqa: S603
+            else:
+                raise FileNotFoundError("open not found")
+        else:
+            xdg_path = shutil.which("xdg-open")
+            if xdg_path:
+                subprocess.Popen([xdg_path, str(exports_path)], shell=False)  # noqa: S603
             else:
                 raise FileNotFoundError("xdg-open not found")
 
@@ -481,10 +527,15 @@ def serve_video(shot_name):
         shot_manager = get_shot_manager(project["path"])
         shot_info = shot_manager.get_shot_info(shot_name)
         
+        # Support type query param for alt_video
+        asset_type = request.args.get('type', 'video')
+        if asset_type not in ('video', 'alt_video'):
+            return "Invalid video type", 400
+        
         # Get the promoted video file path
-        video_path = shot_info['video']['file']
+        video_path = shot_info[asset_type]['file']
         if not video_path:
-            return "No video found for this shot", 404
+            return f"No {asset_type} found for this shot", 404
             
         video_file = Path(video_path)
         if not video_file.exists():

@@ -1,0 +1,424 @@
+/* ============================================================
+   Search Modal — Self-contained styles
+   Amber/gold color scheme for the distinct search button
+   ============================================================ */
+
+/* --- Search Button (Header) --- */
+.search-button {
+    background: linear-gradient(135deg, #f0a040, #d4880f);
+    border: 1px solid #c0780a;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+.search-button:hover {
+    background: linear-gradient(135deg, #f5b860, #e09820);
+    border-color: #d4880f;
+}
+
+/* --- Search Modal Container --- */
+#search-modal .modal-content {
+    max-width: 720px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.search-modal-content {
+    padding: 16px 20px 14px 20px;
+    text-align: left;
+}
+
+/* --- Search Input --- */
+.search-input {
+    width: 100%;
+    padding: 10px 14px;
+    font-size: 0.95rem;
+    border: 2px solid #444;
+    border-radius: 10px;
+    background: #1e1e1e;
+    color: #e0e0e0;
+    outline: none;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+}
+
+.search-input:focus {
+    border-color: #f0a040;
+    box-shadow: 0 0 8px rgba(240, 160, 64, 0.35);
+}
+
+.search-input::placeholder {
+    color: #777;
+}
+
+/* --- Filter Pills Row --- */
+.search-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+}
+
+.search-filter-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    margin-right: 2px;
+}
+
+.search-filter-sep {
+    width: 1px;
+    height: 20px;
+    background: #444;
+    margin: 0 6px;
+}
+
+.search-filter-pill {
+    padding: 3px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border: 1px solid #444;
+    border-radius: 14px;
+    background: transparent;
+    color: #999;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.search-filter-pill:hover {
+    border-color: #666;
+    color: #ccc;
+}
+
+.search-filter-pill.active {
+    background: rgba(240, 160, 64, 0.2);
+    border-color: #f0a040;
+    color: #f0a040;
+}
+
+/* --- Results Area --- */
+.search-results {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 100px;
+    max-height: calc(80vh - 150px);
+}
+
+.search-placeholder {
+    text-align: center;
+    color: #777;
+    padding: 32px 0;
+    font-size: 0.95rem;
+}
+
+.search-no-results {
+    text-align: center;
+    color: #999;
+    padding: 24px 0;
+    font-size: 0.95rem;
+}
+
+/* --- Results List --- */
+.search-results-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.search-shot-group {
+    margin-bottom: 8px;
+    border: 1px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #1a1a1a;
+}
+
+.search-shot-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: #222;
+    border-bottom: 1px solid #333;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.search-shot-header:hover {
+    background: #2a2a2a;
+}
+
+.search-shot-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #f0a040;
+    font-family: 'Courier New', monospace;
+    white-space: nowrap;
+}
+
+.search-shot-display {
+    font-size: 0.8rem;
+    color: #b5b5b5;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.search-match-count {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: #777;
+    background: #2a2a2a;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+/* --- Match Items --- */
+.search-match-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.search-match-item {
+    padding: 5px 10px;
+    border-bottom: 1px solid #2a2a2a;
+    cursor: pointer;
+    transition: background 0.12s ease;
+}
+
+.search-match-item:last-child {
+    border-bottom: none;
+}
+
+.search-match-item:hover {
+    background: #252525;
+}
+
+.search-clickable.keyboard-focus {
+    outline: none;
+    background: rgba(240, 160, 64, 0.15);
+    border-left: 3px solid #f0a040;
+}
+
+.search-match-line {
+    line-height: 1.3;
+}
+
+.search-match-badge {
+    display: inline;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+    letter-spacing: 0.3px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.search-match-badge.prompt {
+    background: rgba(59, 130, 246, 0.2);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.search-match-badge.caption {
+    background: rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.search-match-badge.notes-badge {
+    background: rgba(156, 163, 175, 0.2);
+    color: #9ca3af;
+    border: 1px solid rgba(156, 163, 175, 0.3);
+}
+
+.search-match-badge.shot-name-badge {
+    background: rgba(168, 85, 247, 0.2);
+    color: #a78bfa;
+    border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.search-match-badge.display-name-badge {
+    background: rgba(192, 132, 252, 0.2);
+    color: #c4b5fd;
+    border: 1px solid rgba(192, 132, 252, 0.3);
+}
+
+.search-match-badge .asset-label {
+    opacity: 0.75;
+    margin-left: 2px;
+}
+
+/* --- Search Snippet --- */
+.search-snippet {
+    font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', 'Consolas', 'Courier New', monospace;
+    font-size: 0.75rem;
+    color: #bbb;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.search-snippet mark {
+    background: rgba(240, 160, 64, 0.4);
+    color: #f0a040;
+    padding: 1px 3px;
+    border-radius: 2px;
+}
+
+/* --- Stats Bar --- */
+.search-stats {
+    padding: 4px 0 0 0;
+    font-size: 0.8rem;
+    color: #777;
+    text-align: right;
+    flex-shrink: 0;
+    border-top: 1px solid #333;
+    margin-top: 6px;
+}
+
+/* --- Keyboard shortcut hint --- */
+#search-modal .search-shortcut-hint {
+    font-size: 0.7rem;
+    color: #666;
+    margin-top: 4px;
+    text-align: center;
+}
+
+#search-modal .search-shortcut-hint kbd {
+    background: #333;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 0.7rem;
+    font-family: monospace;
+}
+
+/* ============================================================ */
+/* Light Theme Overrides */
+/* ============================================================ */
+body.light-theme .search-input {
+    background: #fff;
+    color: #1a1a1a;
+    border-color: #ccc;
+}
+
+body.light-theme .search-input:focus {
+    border-color: #f0a040;
+    box-shadow: 0 0 6px rgba(240, 160, 64, 0.3);
+}
+
+body.light-theme .search-input::placeholder {
+    color: #999;
+}
+
+body.light-theme .search-filter-label {
+    color: #999;
+}
+
+body.light-theme .search-filter-sep {
+    background: #ccc;
+}
+
+body.light-theme .search-filter-pill {
+    border-color: #ccc;
+    color: #888;
+}
+
+body.light-theme .search-filter-pill:hover {
+    border-color: #aaa;
+    color: #555;
+}
+
+body.light-theme .search-filter-pill.active {
+    background: rgba(240, 160, 64, 0.15);
+    border-color: #d4880f;
+    color: #c0780a;
+}
+
+body.light-theme .search-shot-group {
+    background: #f9f9f9;
+    border-color: #e0e0e0;
+}
+
+body.light-theme .search-shot-header {
+    background: #f0f0f0;
+    border-bottom-color: #e0e0e0;
+}
+
+body.light-theme .search-shot-header:hover {
+    background: #e8e8e8;
+}
+
+body.light-theme .search-shot-name {
+    color: #c0780a;
+}
+
+body.light-theme .search-shot-display {
+    color: #666;
+}
+
+body.light-theme .search-match-count {
+    background: #e8e8e8;
+    color: #888;
+}
+
+body.light-theme .search-match-item {
+    border-bottom-color: #eee;
+}
+
+body.light-theme .search-match-item:hover {
+    background: #f0f0f0;
+}
+
+body.light-theme .search-clickable.keyboard-focus {
+    background: rgba(240, 160, 64, 0.12);
+    border-left-color: #d4880f;
+}
+
+body.light-theme .search-snippet {
+    color: #555;
+}
+
+body.light-theme .search-snippet mark {
+    background: rgba(240, 160, 64, 0.25);
+    color: #a06010;
+}
+
+body.light-theme .search-stats {
+    color: #999;
+    border-top-color: #e0e0e0;
+}
+
+body.light-theme .search-placeholder,
+body.light-theme .search-no-results {
+    color: #aaa;
+}
+
+body.light-theme #search-modal .search-shortcut-hint {
+    color: #999;
+}
+
+body.light-theme #search-modal .search-shortcut-hint kbd {
+    background: #e8e8e8;
+    border-color: #ccc;
+}
+
+body.light-theme .search-button {
+    color: #fff;
+}

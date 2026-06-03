@@ -5,6 +5,7 @@ from pathlib import Path
 
 from flask import Blueprint, current_app, jsonify, render_template, request
 
+from app.config.constants import MAX_RECENT_PROJECTS
 from app.services.shot_manager import clear_shot_manager_cache, get_shot_manager
 from app.utils import get_app_version
 
@@ -51,8 +52,9 @@ def get_recent_projects():
             shots_dir = p / 'shots'
             if shots_dir.exists():
                 created = datetime.fromtimestamp(p.stat().st_ctime).isoformat()
+                project_info = project_manager.load_project_info(project_path)
                 recent_projects.append({
-                    "name": p.name,
+                    "name": project_info.get('title', p.name),
                     "path": str(p.resolve()),
                     "created": created,
                     "shots": []
@@ -106,7 +108,7 @@ def open_project():
         if path_str in recents:
             recents.remove(path_str)
         recents.insert(0, path_str)
-        project_manager.projects['recent_projects'] = recents[:3]
+        project_manager.projects['recent_projects'] = recents[:MAX_RECENT_PROJECTS]
 
         last_scanned = project_manager.projects.get('last_scanned', {}).get(path_str)
         folder_mtime = project_path.stat().st_mtime

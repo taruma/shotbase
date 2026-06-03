@@ -93,6 +93,7 @@ class ShotManager:
         self.latest_images_dir.mkdir(parents=True, exist_ok=True)
         self.latest_videos_dir.mkdir(parents=True, exist_ok=True)
         self.thumbnail_cache_dir = get_project_thumbnail_cache_dir(self.project_path)
+        self._version_scan_cache = {}  # (shot_name, asset_type) -> max_version
 
     def _load_shot_order(self):
         """Load shot order list from JSON file."""
@@ -189,16 +190,6 @@ class ShotManager:
                 for f in d.glob(f"{old_name}_*_v*.*"):
                     f.rename(d / f.name.replace(old_name, new_name, 1))
 
-        lipsync_dir = new_dir / "lipsync"
-        if lipsync_dir.exists():
-            for part in ["driver", "target", "result"]:
-                for ext in ALLOWED_VIDEO_EXTENSIONS:
-                    src = lipsync_dir / f"{old_name}_{part}{ext}"
-                    if src.exists():
-                        src.rename(lipsync_dir / f"{new_name}_{part}{ext}")
-                for f in lipsync_dir.glob(f"{old_name}_{part}_v*.*"):
-                    f.rename(lipsync_dir / f.name.replace(old_name, new_name, 1))
-
         for ext in ALLOWED_IMAGE_EXTENSIONS:
             # Legacy single-image final
             src = self.latest_images_dir / f"{old_name}{ext}"
@@ -226,10 +217,16 @@ class ShotManager:
             src = self.latest_videos_dir / f"{old_name}{ext}"
             if src.exists():
                 src.rename(self.latest_videos_dir / f"{new_name}{ext}")
-        # Rename video version marker if present
+            alt_src = self.latest_videos_dir / f"{old_name}_alt{ext}"
+            if alt_src.exists():
+                alt_src.rename(self.latest_videos_dir / f"{new_name}_alt{ext}")
+        # Rename video version markers if present
         vid_marker = self.latest_videos_dir / f"{old_name}.version"
         if vid_marker.exists():
             vid_marker.rename(self.latest_videos_dir / f"{new_name}.version")
+        alt_vid_marker = self.latest_videos_dir / f"{old_name}_alt.version"
+        if alt_vid_marker.exists():
+            alt_vid_marker.rename(self.latest_videos_dir / f"{new_name}_alt.version")
 
         if self.thumbnail_cache_dir.exists():
             for thumb in self.thumbnail_cache_dir.glob(f"{old_name}_*_thumb.jpg"):
@@ -258,7 +255,6 @@ class ShotManager:
         # Create subfolders
         (shot_dir / 'images').mkdir(exist_ok=True)
         (shot_dir / 'videos').mkdir(exist_ok=True)
-        (shot_dir / 'lipsync').mkdir(exist_ok=True)
 
         self.latest_images_dir.mkdir(parents=True, exist_ok=True)
         self.latest_videos_dir.mkdir(parents=True, exist_ok=True)
@@ -306,7 +302,9 @@ class ShotManager:
         else:
             shot_dirs = sorted(shot_dirs, key=lambda d: d.name)
 
-        shots = [self.get_shot_info(shot_dir.name) for shot_dir in shot_dirs]
+        # Cache archived set once so get_shot_info() doesn't re-read from disk per shot
+        archived_names = self._load_archived()
+        shots = [self.get_shot_info(shot_dir.name, archived_names=archived_names) for shot_dir in shot_dirs]
         return shots
 
     def save_shot_order(self, shot_order):
@@ -438,7 +436,21 @@ class ShotManager:
         except Exception as e:
             raise ValueError(f"Failed to save display name: {str(e)}")
 
-    def get_shot_info(self, shot_name):
+    @staticmethod
+    def _thumbnail_url(asset_path, shot_name, is_video=False):
+        """Compute thumbnail URL without generating the file (lazy).
+
+        Returns the URL path that the thumbnail *would* have, based solely on
+        the source asset stem and shot name.  Actual generation is deferred to
+        the first request through ``/api/shots/thumbnail/``.
+        """
+        if not asset_path:
+            return None
+        p = Path(asset_path)
+        suffix = "_vthumb" if is_video else "_thumb"
+        return f"/api/shots/thumbnail/{shot_name}_{p.stem}{suffix}.jpg"
+
+    def get_shot_info(self, shot_name, archived_names=None):
         """Get information about a specific shot."""
         validate_shot_name(shot_name)
         shot_dir = self.wip_dir / shot_name
@@ -460,15 +472,15 @@ class ShotManager:
             self.latest_images_dir, shot_dir / 'images',
             f'{shot_name}_first', ALLOWED_IMAGE_EXTENSIONS
         )
-        # Backward compatibility for first frame (legacy single image)
-        legacy_image_path, legacy_max_version = self._get_latest_asset(
-            self.latest_images_dir, shot_dir / 'images',
-            shot_name, ALLOWED_IMAGE_EXTENSIONS
-        )
-        use_legacy_for_first = (not first_image_path and first_max_version == 0 and (legacy_image_path or legacy_max_version > 0))
-        if use_legacy_for_first:
-            first_image_path = legacy_image_path
-            first_max_version = legacy_max_version
+        # Only fall back to legacy naming if modern '_first' naming found nothing
+        if not first_image_path and first_max_version == 0:
+            legacy_image_path, legacy_max_version = self._get_latest_asset(
+                self.latest_images_dir, shot_dir / 'images',
+                shot_name, ALLOWED_IMAGE_EXTENSIONS
+            )
+            if legacy_image_path or legacy_max_version > 0:
+                first_image_path = legacy_image_path
+                first_max_version = legacy_max_version
 
         # New naming for last frame
         last_image_path, last_max_version = self._get_latest_asset(
@@ -476,13 +488,23 @@ class ShotManager:
             f'{shot_name}_last', ALLOWED_IMAGE_EXTENSIONS
         )
 
-        # Detect existing versions if max_version seems inaccurate
+        # Detect existing versions if max_version seems inaccurate (cached per ShotManager instance)
         if first_max_version == 0:
-            detected_first_versions = self._detect_existing_versions(shot_name, 'first_image')
+            cache_key = (shot_name, 'first_image')
+            if cache_key in self._version_scan_cache:
+                detected_first_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_first_versions = self._detect_existing_versions(shot_name, 'first_image')
+                self._version_scan_cache[cache_key] = detected_first_versions
             first_max_version = max(first_max_version, detected_first_versions)
-        
+
         if last_max_version == 0:
-            detected_last_versions = self._detect_existing_versions(shot_name, 'last_image')
+            cache_key = (shot_name, 'last_image')
+            if cache_key in self._version_scan_cache:
+                detected_last_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_last_versions = self._detect_existing_versions(shot_name, 'last_image')
+                self._version_scan_cache[cache_key] = detected_last_versions
             last_max_version = max(last_max_version, detected_last_versions)
 
         first_image_path = self._normalize_path(first_image_path)
@@ -500,9 +522,14 @@ class ShotManager:
             shot_name, ALLOWED_VIDEO_EXTENSIONS
         )
         
-        # Detect existing video versions if max_version seems inaccurate
+        # Detect existing video versions if max_version seems inaccurate (cached per ShotManager instance)
         if max_video_version == 0:
-            detected_video_versions = self._detect_existing_versions(shot_name, 'video')
+            cache_key = (shot_name, 'video')
+            if cache_key in self._version_scan_cache:
+                detected_video_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_video_versions = self._detect_existing_versions(shot_name, 'video')
+                self._version_scan_cache[cache_key] = detected_video_versions
             max_video_version = max(max_video_version, detected_video_versions)
             
         latest_video = self._normalize_path(latest_video)
@@ -511,36 +538,32 @@ class ShotManager:
         if current_video_version > 0:
             video_prompt = self.load_prompt(shot_name, 'video', current_video_version)
 
-        # Lipsync videos
-        lipsync_dir = shot_dir / 'lipsync'
-        lipsync = {}
-        for part in ['driver', 'target', 'result']:
-            file_path, ver = self._get_latest_asset(
-                lipsync_dir, lipsync_dir,
-                f'{shot_name}_{part}', ALLOWED_VIDEO_EXTENSIONS
-            )
-            file_path = self._normalize_path(file_path)
-            prompt_text = ''
-            if ver > 0:
-                prompt_text = self.load_prompt(shot_name, part, ver)
-            lipsync[part] = {
-                'file': file_path,
-                'version': ver,
-                'thumbnail': None,  # will be replaced with video thumb below
-                'prompt': prompt_text,
-            }
+        # Alt video
+        latest_alt_video, max_alt_video_version = self._get_latest_asset(
+            self.latest_videos_dir, shot_dir / 'videos',
+            f'{shot_name}_alt', ALLOWED_VIDEO_EXTENSIONS
+        )
+        
+        if max_alt_video_version == 0:
+            cache_key = (shot_name, 'alt_video')
+            if cache_key in self._version_scan_cache:
+                detected_alt_video_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_alt_video_versions = self._detect_existing_versions(shot_name, 'alt_video')
+                self._version_scan_cache[cache_key] = detected_alt_video_versions
+            max_alt_video_version = max(max_alt_video_version, detected_alt_video_versions)
+            
+        latest_alt_video = self._normalize_path(latest_alt_video)
+        current_alt_video_version = self.get_current_version(shot_name, 'alt_video', max_alt_video_version)
+        alt_video_prompt = ''
+        if current_alt_video_version > 0:
+            alt_video_prompt = self.load_prompt(shot_name, 'alt_video', current_alt_video_version)
 
-        # Thumbnails
-        first_thumb = self.get_thumbnail_path(Path(first_image_path), shot_name) if first_image_path else None
-        last_thumb = self.get_thumbnail_path(Path(last_image_path), shot_name) if last_image_path else None
-        video_thumb = self.get_video_thumbnail_path(Path(latest_video), shot_name) if latest_video else None
-
-        for part_name, info in lipsync.items():
-            info['thumbnail'] = self.get_video_thumbnail_path(Path(info['file']), f"{shot_name}_{part_name}") if info['file'] else None
-
-        logger.debug("%s -> First image thumbnail: %s", shot_name, first_thumb)
-        logger.debug("%s -> Last image thumbnail: %s", shot_name, last_thumb)
-        logger.debug("%s -> Video thumbnail: %s", shot_name, video_thumb)
+        # Thumbnails — lazy: compute URL path only; generation deferred to first browser request
+        first_thumb = self._thumbnail_url(first_image_path, shot_name, is_video=False) if first_image_path else None
+        last_thumb = self._thumbnail_url(last_image_path, shot_name, is_video=False) if last_image_path else None
+        video_thumb = self._thumbnail_url(latest_video, shot_name, is_video=True) if latest_video else None
+        alt_video_thumb = self._thumbnail_url(latest_alt_video, f"{shot_name}_alt", is_video=True) if latest_alt_video else None
 
         captions = self.load_captions(shot_name)
 
@@ -578,8 +601,15 @@ class ShotManager:
                 'prompt': video_prompt,
                 'caption': captions.get('video', ''),
             },
-            'lipsync': lipsync,
-            'archived': (shot_name in self._load_archived())
+            'alt_video': {
+                'file': latest_alt_video,
+                'current_version': current_alt_video_version,
+                'max_version': max_alt_video_version,
+                'thumbnail': alt_video_thumb,
+                'prompt': alt_video_prompt,
+                'caption': captions.get('alt_video', ''),
+            },
+            'archived': (shot_name in (archived_names if archived_names is not None else self._load_archived()))
         }
 
 
@@ -628,6 +658,9 @@ class ShotManager:
         elif asset_type == 'video':
             wip_dir = shot_dir / 'videos'
             patterns = [f'{shot_name}_v*.*']
+        elif asset_type == 'alt_video':
+            wip_dir = shot_dir / 'videos'
+            patterns = [f'{shot_name}_alt_v*.*']
         else:
             return 0  # Unsupported asset type
 
@@ -661,8 +694,8 @@ class ShotManager:
             return self.latest_images_dir / f"{shot_name}_last.version"
         elif asset_type == 'video':
             return self.latest_videos_dir / f"{shot_name}.version"
-        elif asset_type in {'driver', 'target', 'result'}:
-            return (self.wip_dir / shot_name / 'lipsync') / f"{shot_name}_{asset_type}.version"
+        elif asset_type == 'alt_video':
+            return self.latest_videos_dir / f"{shot_name}_alt.version"
         else:
             raise ValueError('Invalid asset type')
 
@@ -703,7 +736,7 @@ class ShotManager:
     def promote_asset(self, shot_name, asset_type, version):
         """Promote a specific WIP version to be the current final for image variants/video."""
         validate_shot_name(shot_name)
-        if asset_type not in {'image', 'first_image', 'last_image', 'video'}:
+        if asset_type not in {'image', 'first_image', 'last_image', 'video', 'alt_video'}:
             raise ValueError('Invalid asset type')
 
         shot_dir = self.wip_dir / shot_name
@@ -759,43 +792,46 @@ class ShotManager:
             _ = self.get_thumbnail_path(final_path, shot_name)
             return self._normalize_path(final_path)
 
-        # Video
+        # Video & Alt Video
         wip_dir = shot_dir / 'videos'
         if not wip_dir.exists():
             raise ValueError(f"No video WIP directory for shot {shot_name}")
 
+        is_alt = (asset_type == 'alt_video')
+        base_prefix = f'{shot_name}_alt' if is_alt else shot_name
+
         src = None
         for ext in ALLOWED_VIDEO_EXTENSIONS:
-            candidate = wip_dir / f'{shot_name}_v{int(version):03d}{ext}'
+            candidate = wip_dir / f'{base_prefix}_v{int(version):03d}{ext}'
             if candidate.exists():
                 src = candidate
                 break
         if not src:
-            raise ValueError(f"Version v{int(version):03d} not found for {shot_name} video")
+            raise ValueError(f"Version v{int(version):03d} not found for {shot_name} {asset_type}")
 
         final_dir = self.latest_videos_dir
         final_dir.mkdir(parents=True, exist_ok=True)
 
-        for existing in final_dir.glob(f"{shot_name}.*"):
+        for existing in final_dir.glob(f"{base_prefix}.*"):
             try:
                 existing.unlink()
             except Exception:
                 logger.exception("Error unlinking existing final video")
 
-        final_path = final_dir / f"{shot_name}{src.suffix}"
+        final_path = final_dir / f"{base_prefix}{src.suffix}"
         _shutil.copy2(str(src), str(final_path))
 
-        self.set_current_version(shot_name, 'video', int(version))
+        self.set_current_version(shot_name, asset_type, int(version))
         try:
             final_stem = Path(final_path).stem
-            thumb_filename = f"{shot_name}_{final_stem}_vthumb.jpg"
+            thumb_filename = f"{base_prefix}_{final_stem}_vthumb.jpg"
             old_thumb = self.thumbnail_cache_dir / thumb_filename
             if old_thumb.exists():
                 old_thumb.unlink()
         except Exception:
             logger.exception("Error unlinking old video thumbnail")
 
-        _ = self.get_video_thumbnail_path(final_path, shot_name)
+        _ = self.get_video_thumbnail_path(final_path, base_prefix)
         return self._normalize_path(final_path)
 
     def save_shot_notes(self, shot_name, notes):
@@ -834,7 +870,7 @@ class ShotManager:
     def save_caption(self, shot_name, asset_type, caption):
         """Persist caption text for given asset type for a shot."""
         validate_shot_name(shot_name)
-        if asset_type not in {'first_image', 'last_image', 'video'}:
+        if asset_type not in {'first_image', 'last_image', 'video', 'alt_video'}:
             raise ValueError('Invalid asset type')
         shot_dir = self.wip_dir / shot_name
         if not shot_dir.exists():
@@ -863,9 +899,9 @@ class ShotManager:
         elif asset_type == 'video':
             base_dir = shot_dir / 'videos'
             filename = f'{shot_name}_v{version:03d}_video_prompt.txt'
-        elif asset_type in {'driver', 'target', 'result'}:
-            base_dir = shot_dir / 'lipsync'
-            filename = f'{shot_name}_{asset_type}_v{version:03d}_prompt.txt'
+        elif asset_type == 'alt_video':
+            base_dir = shot_dir / 'videos'
+            filename = f'{shot_name}_alt_v{version:03d}_video_prompt.txt'
         else:
             raise ValueError('Invalid asset type')
         return base_dir / filename
@@ -918,9 +954,9 @@ class ShotManager:
         elif asset_type == 'video':
             base_dir = shot_dir / 'videos'
             patterns = [f'{shot_name}_v*_video_prompt.txt']
-        elif asset_type in {'driver', 'target', 'result'}:
-            base_dir = shot_dir / 'lipsync'
-            patterns = [f'{shot_name}_{asset_type}_v*_prompt.txt']
+        elif asset_type == 'alt_video':
+            base_dir = shot_dir / 'videos'
+            patterns = [f'{shot_name}_alt_v*_video_prompt.txt']
         else:
             raise ValueError('Invalid asset type')
 
@@ -938,6 +974,60 @@ class ShotManager:
                     except (IndexError, ValueError):
                         continue
         return sorted(versions)
+
+    def _generate_thumbnail_on_demand(self, thumb_filename):
+        """Ensure a thumbnail exists and is fresh.
+
+        Called by ``serve_thumbnail`` to generate or refresh the thumbnail
+        for the given filename.  Parses the filename to reconstruct the
+        source asset path, then delegates to ``get_thumbnail_path`` or
+        ``get_video_thumbnail_path``.  Those methods already compare
+        source-vs-thumb mtimes internally, so stale thumbs for replaced
+        assets are automatically regenerated.
+        """
+        stem = Path(thumb_filename).stem  # e.g. "SH001_SH001_first_thumb" or "SH001_SH001_vthumb"
+
+        is_video = stem.endswith("_vthumb")
+        if is_video:
+            stem = stem[:-len("_vthumb")]   # "SH001_SH001"
+        else:
+            if stem.endswith("_thumb"):
+                stem = stem[:-len("_thumb")]  # "SH001_SH001_first"
+
+        # stem is now "{shot_name}_{asset_stem}" where asset_stem may
+        # be just the shot name (promoted video / legacy image), or
+        # "{shot_name}_first", "{shot_name}_last", "{shot_name}_alt", etc.
+        shot_name = stem.split("_", 1)[0]
+
+        # Locate the source file by scanning the project directories
+        shot_dir = self.wip_dir / shot_name
+
+        # Try in latest dirs first, then WIP
+        search_dirs = []
+        if is_video:
+            search_dirs = [
+                self.latest_videos_dir,
+                shot_dir / "videos",
+            ]
+        else:
+            search_dirs = [
+                self.latest_images_dir,
+                shot_dir / "images",
+            ]
+
+        for d in search_dirs:
+            if not d.exists():
+                continue
+            for f in d.iterdir():
+                if not f.is_file():
+                    continue
+                expected_thumb = f"{shot_name}_{f.stem}_vthumb.jpg" if is_video else f"{shot_name}_{f.stem}_thumb.jpg"
+                if expected_thumb == thumb_filename:
+                    if is_video:
+                        self.get_video_thumbnail_path(f, shot_name)
+                    else:
+                        self.get_thumbnail_path(f, shot_name)
+                    return
 
     def get_thumbnail_path(self, image_path, shot_name):
         """Return (and create if necessary) the thumbnail for an image."""
@@ -1082,33 +1172,46 @@ class ShotManager:
                         dst = videos_dir / f"{order:03d}_{shot_name}{display_suffix}{ext}"
                         shutil.copy2(src, dst)
 
+                if info['alt_video']['file']:
+                    src = Path(info['alt_video']['file'])
+                    if src.exists():
+                        ext = src.suffix
+                        dst = videos_dir / f"{order:03d}_{shot_name}{display_suffix}_alt{ext}"
+                        shutil.copy2(src, dst)
+
         # Generate metadata if requested
         if include_metadata:
             # Collect data for tables and notes
             first_data = []
             last_data = []
             video_data = []
+            alt_video_data = []
             notes_list = []
 
             for order, shot in enumerate(non_archived_shots, start=1):
                 shot_name = shot['name']
+                display_name = shot['display_name'] or ''
                 info = self.get_shot_info(shot_name)
 
                 # First Frame
                 if ('images' in export_type or export_type == 'all') and (info['first_image']['caption'] or info['first_image']['prompt']):
-                    first_data.append((order, shot_name, info['first_image']['caption'], info['first_image']['prompt']))
+                    first_data.append((order, shot_name, display_name, info['first_image']['caption'], info['first_image']['prompt']))
 
                 # Last Frame
                 if ('images' in export_type or export_type == 'all') and (info['last_image']['caption'] or info['last_image']['prompt']):
-                    last_data.append((order, shot_name, info['last_image']['caption'], info['last_image']['prompt']))
+                    last_data.append((order, shot_name, display_name, info['last_image']['caption'], info['last_image']['prompt']))
 
                 # Video
                 if ('videos' in export_type or export_type == 'all') and (info['video']['caption'] or info['video']['prompt']):
-                    video_data.append((order, shot_name, info['video']['caption'], info['video']['prompt']))
+                    video_data.append((order, shot_name, display_name, info['video']['caption'], info['video']['prompt']))
+
+                # Alt Video
+                if ('videos' in export_type or export_type == 'all') and (info['alt_video']['caption'] or info['alt_video']['prompt']):
+                    alt_video_data.append((order, shot_name, display_name, info['alt_video']['caption'], info['alt_video']['prompt']))
 
                 # Notes
                 if info['notes'].strip():
-                    notes_list.append((order, shot_name, info['notes']))
+                    notes_list.append((order, shot_name, display_name, info['notes']))
 
             # Build MD content
             md_lines = [
@@ -1138,44 +1241,55 @@ class ShotManager:
             if first_data:
                 md_lines.extend([
                     "## First Frame",
-                    "| Order | Shot Name | Captions | Prompts |",
-                    "|-------|-----------|----------|---------|"
+                    "| Order | Shot Name | Display Name | Captions | Prompts |",
+                    "|-------|-----------|--------------|----------|---------|"
                 ])
-                for order, name, caption, prompt in first_data:
-                    md_lines.append(f"| {order:03d} | {name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+                for order, name, display_name, caption, prompt in first_data:
+                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
                 md_lines.append("")
 
             # Last Frame table
             if last_data:
                 md_lines.extend([
                     "## Last Frame",
-                    "| Order | Shot Name | Captions | Prompts |",
-                    "|-------|-----------|----------|---------|"
+                    "| Order | Shot Name | Display Name | Captions | Prompts |",
+                    "|-------|-----------|--------------|----------|---------|"
                 ])
-                for order, name, caption, prompt in last_data:
-                    md_lines.append(f"| {order:03d} | {name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+                for order, name, display_name, caption, prompt in last_data:
+                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
                 md_lines.append("")
 
             # Video table
             if video_data:
                 md_lines.extend([
                     "## Video",
-                    "| Order | Shot Name | Captions | Prompts |",
-                    "|-------|-----------|----------|---------|"
+                    "| Order | Shot Name | Display Name | Captions | Prompts |",
+                    "|-------|-----------|--------------|----------|---------|"
                 ])
-                for order, name, caption, prompt in video_data:
-                    md_lines.append(f"| {order:03d} | {name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+                for order, name, display_name, caption, prompt in video_data:
+                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+                md_lines.append("")
+
+            # Alt Video table
+            if alt_video_data:
+                md_lines.extend([
+                    "## Alt Video",
+                    "| Order | Shot Name | Display Name | Captions | Prompts |",
+                    "|-------|-----------|--------------|----------|---------|"
+                ])
+                for order, name, display_name, caption, prompt in alt_video_data:
+                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
                 md_lines.append("")
 
             # Notes table
             if notes_list:
                 md_lines.extend([
                     "## Notes",
-                    "| Order | Shot Name | Notes |",
-                    "|-------|-----------|-------|"
+                    "| Order | Shot Name | Display Name | Notes |",
+                    "|-------|-----------|--------------|-------|"
                 ])
-                for order, name, notes in notes_list:
-                    md_lines.append(f"| {order:03d} | {name} | {notes.replace('|', '\\|').replace('\n', '<br>')} |")
+                for order, name, display_name, notes in notes_list:
+                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {notes.replace('|', '\\|').replace('\n', '<br>')} |")
                 md_lines.append("")
 
             # Write MD file

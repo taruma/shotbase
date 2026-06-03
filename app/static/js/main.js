@@ -271,7 +271,6 @@ function handlePromptButtonClick(event) {
     const type = btn.dataset.type;
 
     // For image/video we set data-current-version and data-max-version.
-    // For lipsync we still have only data-version; treat it as both current and max.
     let currentVersion = btn.dataset.currentVersion ? parseInt(btn.dataset.currentVersion, 10) : undefined;
     let maxVersion = btn.dataset.maxVersion ? parseInt(btn.dataset.maxVersion, 10) : undefined;
 
@@ -318,9 +317,21 @@ async function checkForProject() {
 }
 
 function showSetupScreen() {
+    // Hide TOC panel when leaving project
+    const toc = document.getElementById('shot-toc');
+    if (toc) {
+        toc.style.display = 'none';
+        toc.classList.remove('open');
+    }
+    const tocToggle = document.getElementById('toc-toggle');
+    if (tocToggle) {
+        tocToggle.setAttribute('aria-expanded', 'false');
+    }
+
     document.getElementById('setup-screen').style.display = 'flex';
     document.getElementById('main-interface').style.display = 'none';
     loadRecentProjects();
+    updatePageTitle(null);
     // Clear flag to indicate we're not in a project
     sessionStorage.removeItem('inProject');
 }
@@ -343,7 +354,7 @@ async function loadRecentProjects() {
                 projectItem.innerHTML = `
                             <div class="recent-project-info">
                                 <div class="recent-project-name">${escapeHtml(project.name)}</div>
-                                <div class="recent-project-path">${escapeHtml(project.path)}</div>
+<div class="recent-project-path" title="${escapeHtml(project.path)}">${escapeHtml(project.path)}</div>
                             </div>
                             <button class="dark-button" data-project-path="${project.path}">Open</button>
                         `;
@@ -361,6 +372,26 @@ async function loadRecentProjects() {
         console.error('Error loading recent projects:', error);
         document.getElementById('recent-projects-section').style.display = 'none';
     }
+}
+
+function updatePageTitle(project) {
+    if (!project) {
+        document.title = 'ShotBase • v' + getAppVersion();
+        return;
+    }
+    const info = project.info || {};
+    const title = info.title || project.name || 'Untitled Project';
+    const version = info.version ? 'v' + info.version : 'no version';
+    document.title = title + ' \u2022 ' + version + ' \u2022 ShotBase';
+}
+
+function getAppVersion() {
+    // Extract app version from the setup screen's version text
+    const versionEl = document.querySelector('.version-text');
+    if (versionEl && versionEl.textContent.startsWith('v')) {
+        return versionEl.textContent.substring(1);
+    }
+    return '?';
 }
 
 function updateProjectHeader(info, fallbackName) {
@@ -387,6 +418,7 @@ function showMainInterface() {
     document.getElementById('setup-screen').style.display = 'none';
     document.getElementById('main-interface').style.display = 'block';
     updateProjectHeader(currentProject.info || {}, currentProject.name);
+    updatePageTitle(currentProject);
     const input = document.getElementById('manual-path-input');
     if (input && currentProject && currentProject.path) {
         input.value = currentProject.path;
@@ -455,15 +487,13 @@ function createTocUI() {
 function positionToc() {
     const toc = document.getElementById('shot-toc');
     const grid = document.querySelector('.shot-grid');
-    const menuBar = document.querySelector('.menu-bar');
     const header = document.querySelector('.header');
 
     if (!toc || !grid) return;
 
     const gridRect = grid.getBoundingClientRect();
-    const menuHeight = menuBar ? menuBar.offsetHeight : 0;
     const headerHeight = header ? header.offsetHeight : 0;
-    const topOffset = Math.max(20, menuHeight + headerHeight + 10);
+    const topOffset = Math.max(20, headerHeight + 10);
     const availableWidth = window.innerWidth - gridRect.right - 32;
 
     // Determine mode: docked or drawer
@@ -537,13 +567,23 @@ function renderTOC() {
     if (archivedShots.length > 0) {
         const archivedSection = document.createElement('div');
         archivedSection.className = 'toc-section';
-        archivedSection.innerHTML = `
-                    <div class="toc-section-title">Archived Shots (${archivedShots.length})</div>
-                    <ul class="toc-list" id="toc-archived-list"></ul>
-                `;
-        toc.appendChild(archivedSection);
 
-        const archivedList = document.getElementById('toc-archived-list');
+        const isTocArchivedOpen = localStorage.getItem('tocArchivedOpen') === 'true';
+
+        const archivedHeader = document.createElement('button');
+        archivedHeader.className = 'toc-archived-header';
+        archivedHeader.innerHTML = `
+            <span class="chevron" aria-hidden="true">${isTocArchivedOpen ? '▾' : '▸'}</span>
+            <span>Archived Shots</span>
+            <span class="count">(${archivedShots.length})</span>
+        `;
+        archivedHeader.addEventListener('click', toggleTocArchivedSection);
+
+        const archivedList = document.createElement('ul');
+        archivedList.className = 'toc-list';
+        archivedList.id = 'toc-archived-list';
+        archivedList.style.display = isTocArchivedOpen ? 'block' : 'none';
+
         archivedShots.forEach(shot => {
             const item = document.createElement('li');
             item.className = 'toc-item archived';
@@ -554,6 +594,10 @@ function renderTOC() {
             item.addEventListener('click', () => scrollToShot(shot.name));
             archivedList.appendChild(item);
         });
+
+        archivedSection.appendChild(archivedHeader);
+        archivedSection.appendChild(archivedList);
+        toc.appendChild(archivedSection);
     }
 
     // Set up IntersectionObserver to highlight active item
@@ -736,6 +780,19 @@ function renderShots() {
     setTimeout(initTooltips, 100);
 }
 
+function toggleTocArchivedSection() {
+    const archivedHeader = this;
+    const archivedList = document.getElementById('toc-archived-list');
+    const chevron = archivedHeader.querySelector('.chevron');
+
+    const isOpen = archivedList.style.display !== 'none';
+    archivedList.style.display = isOpen ? 'none' : 'block';
+    chevron.textContent = isOpen ? '▸' : '▾';
+
+    // Persist state to localStorage
+    localStorage.setItem('tocArchivedOpen', isOpen ? 'false' : 'true');
+}
+
 function toggleArchivedSection() {
     const archivedSection = document.getElementById('archived-section');
     const archivedContent = document.getElementById('archived-shot-list');
@@ -818,7 +875,7 @@ function createShotRow(shot) {
                 ${createDropZone(shot, 'first_image')}
                 ${createDropZone(shot, 'last_image')}
                 ${createDropZone(shot, 'video')}
-                ${'' /* createLipsyncZone(shot) */}
+                ${createDropZone(shot, 'alt_video')}
                 <div class="notes-cell">
                     <textarea class="notes-input" 
                               placeholder="Add notes..." 
@@ -838,6 +895,7 @@ function displayAssetLabel(type) {
         case 'first_image': return 'First Frame';
         case 'last_image': return 'Last Frame';
         case 'video': return 'Video';
+        case 'alt_video': return 'Alt Video';
         default:
             return type.charAt(0).toUpperCase() + type.slice(1);
     }
@@ -850,7 +908,7 @@ function createDropZone(shot, type) {
     const hasFile = maxVersion > 0 || currentVersion > 0;
 
     if (hasFile) {
-        const isVideo = type === 'video';
+        const isVideo = type === 'video' || type === 'alt_video';
         const thumbnailUrl = file.thumbnail ? `${file.thumbnail}?v=${Date.now()}` : null;
 
         let mediaHtml;
@@ -858,7 +916,7 @@ function createDropZone(shot, type) {
             const videoStyle = thumbnailUrl ?
                 `background-image: url('${thumbnailUrl}'); background-size: cover; background-position: center;` :
                 'background: #404040;';
-            mediaHtml = `<div class="preview-thumbnail video-thumbnail" style="${videoStyle}" onclick="playVideo('${shot.name}', '${shot.display_name || ''}')"></div>`;
+            mediaHtml = `<div class="preview-thumbnail video-thumbnail" style="${videoStyle}" onclick="playVideo('${shot.name}', '${shot.display_name || ''}', '${type}')"></div>`;
         } else {
             mediaHtml = thumbnailUrl ?
                 `<img class="preview-thumbnail" src="${thumbnailUrl}" alt="${displayAssetLabel(type)} thumbnail" onclick="showImage('${shot.name}', '${shot.display_name || ''}', '${type}')">` :
@@ -907,42 +965,6 @@ function createDropZone(shot, type) {
                     </div>
                 `;
     }
-}
-
-function createLipsyncZone(shot) {
-    const parts = ['driver', 'target', 'result'];
-    let html = '<div class="lipsync-cell">';
-    for (const part of parts) {
-        const file = shot.lipsync[part];
-        const hasFile = file.version > 0;
-        const label = part.charAt(0).toUpperCase() + part.slice(1);
-        if (hasFile) {
-            const thumbnailUrl = file.thumbnail ? `${file.thumbnail}?v=${Date.now()}` : null;
-            const thumbnailStyle = thumbnailUrl ?
-                `background-image: url('${thumbnailUrl}'); background-size: cover; background-position: center;` :
-                'background: #404040;';
-            html += `
-                        <div class="drop-zone lipsync-drop" ondragover="handleDragOver(event, '${part}')" ondrop="handleDrop(event, '${shot.name}', '${part}')" ondragleave="handleDragLeave(event)">
-                            <div class="file-preview lipsync-preview">
-                                <div class="preview-thumbnail lipsync-thumbnail" data-label="${label}" style="${thumbnailStyle}"></div>
-                                <div class="version-badge">v${String(file.version).padStart(3, '0')}</div>
-                                <button class="prompt-button" title="View and edit prompt"
-                                        data-shot="${shot.name}"
-                                        data-type="${part}"
-                                        data-version="${file.version}">P</button>
-                            </div>
-                        </div>`;
-        } else {
-            html += `
-                        <div class="drop-zone lipsync-drop empty" ondragover="handleDragOver(event, '${part}')" ondrop="handleDrop(event, '${shot.name}', '${part}')" ondragleave="handleDragLeave(event)">
-                            <div class="drop-placeholder">
-                                <div class="text">${label}</div>
-                            </div>
-                        </div>`;
-        }
-    }
-    html += '</div>';
-    return html;
 }
 
 async function addNewShot() {
@@ -1025,6 +1047,7 @@ async function uploadFile(file, shotName, fileType) {
     if (fileType === 'first_image') dropZoneIndex = 2;
     else if (fileType === 'last_image') dropZoneIndex = 3;
     else if (fileType === 'video') dropZoneIndex = 4;
+    else if (fileType === 'alt_video') dropZoneIndex = 5;
     else return; // Invalid type
     const dropZone = row.children[dropZoneIndex];
     if (!dropZone || !dropZone.classList.contains('drop-zone')) {
@@ -1152,7 +1175,7 @@ function updateDropZoneForShot(shotName, assetType, shotData) {
     if (!shotRow) return;
 
     // Get the drop zone based on asset type - they appear in specific order after action-cell:
-    // [0] action-cell, [1] shot-name, [2] first_image, [3] last_image, [4] video, [5] notes
+    // [0] action-cell, [1] shot-name, [2] first_image, [3] last_image, [4] video, [5] alt_video, [6] notes
     let dropZone = null;
     if (assetType === 'first_image') {
         dropZone = shotRow.children[2]; // first child after action and name
@@ -1160,6 +1183,8 @@ function updateDropZoneForShot(shotName, assetType, shotData) {
         dropZone = shotRow.children[3];
     } else if (assetType === 'video') {
         dropZone = shotRow.children[4];
+    } else if (assetType === 'alt_video') {
+        dropZone = shotRow.children[5];
     }
 
     if (!dropZone || !dropZone.classList.contains('drop-zone')) return;
@@ -1209,6 +1234,7 @@ function replaceDropZoneForShot(shotName, assetType, shotData) {
     if (assetType === 'first_image') dropZoneIndex = 2;
     else if (assetType === 'last_image') dropZoneIndex = 3;
     else if (assetType === 'video') dropZoneIndex = 4;
+    else if (assetType === 'alt_video') dropZoneIndex = 5;
     else return;
 
     const oldDropZone = shotRow.children[dropZoneIndex];
@@ -1336,7 +1362,7 @@ function openFileDialog(shotName, fileType) {
     input.type = 'file';
     if (fileType === 'first_image' || fileType === 'last_image' || fileType === 'image') {
         input.accept = 'image/*';
-    } else if (fileType === 'video') {
+    } else if (fileType === 'video' || fileType === 'alt_video') {
         input.accept = 'video/*';
     }
     input.style.display = 'none';
@@ -1352,6 +1378,9 @@ function openFileDialog(shotName, fileType) {
 
 async function saveNotes(shotName, notes) {
     try {
+        const idx = shots.findIndex(s => s.name === shotName);
+        if (idx !== -1) shots[idx].notes = notes;
+
         const response = await fetch('/api/shots/notes', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1645,13 +1674,11 @@ async function savePrompt() {
         } else {
             const shot = shots.find(s => s.name === shotName);
             if (shot) {
-                if (assetType === 'first_image' || assetType === 'last_image' || assetType === 'image' || assetType === 'video') {
+                if (assetType === 'first_image' || assetType === 'last_image' || assetType === 'image' || assetType === 'video' || assetType === 'alt_video') {
                     const key = assetType === 'image' ? 'first_image' : assetType; // legacy map
                     if (shot[key]) {
                         shot[key].prompt = promptText;
                     }
-                } else if (shot.lipsync && shot.lipsync[assetType]) {
-                    shot.lipsync[assetType].prompt = promptText;
                 }
             }
         }
@@ -1660,6 +1687,21 @@ async function savePrompt() {
         showNotification('Error saving prompt', 'error');
     }
     closePromptModal();
+}
+
+async function openExportsFolder() {
+    try {
+        const response = await fetch('/api/shots/open-exports-folder', {
+            method: 'POST'
+        });
+        const result = await response.json();
+        if (!result.success) {
+            showNotification(result.error || 'Failed to open exports folder', 'error');
+        }
+    } catch (e) {
+        console.error('Open exports folder failed:', e);
+        showNotification('Failed to open exports folder', 'error');
+    }
 }
 
 async function openShotsFolder() {
@@ -1791,14 +1833,6 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
-
-    // Close modal when clicking outside
-    document.addEventListener('click', function (event) {
-        const modal = document.getElementById('reorder-modal');
-        if (modal && event.target === modal) {
-            closeReorderModal();
-        }
-    });
 
     // Back to Top Button functionality
     const backToTopButton = document.getElementById('backToTop');
@@ -1999,7 +2033,10 @@ async function saveProjectInfo() {
             // Update the project header with saved values
             updateProjectHeader(result.data || {}, currentProject && currentProject.name);
             // Keep local cache coherent
-            if (currentProject) currentProject.info = result.data;
+            if (currentProject) {
+                currentProject.info = result.data;
+                updatePageTitle(currentProject);
+            }
         } else {
             showNotification(result.error || 'Failed to save project information', 'error');
         }
@@ -2019,6 +2056,16 @@ function openExportModal() {
 
 function closeExportModal() {
     document.getElementById('export-modal').style.display = 'none';
+    // Reset loading state in case modal was closed mid-export
+    const exportBtn = document.getElementById('export-btn');
+    const cancelBtn = document.getElementById('export-cancel-btn');
+    const loadingEl = document.getElementById('export-loading');
+    if (exportBtn) {
+        exportBtn.disabled = false;
+        exportBtn.textContent = 'Export';
+    }
+    if (cancelBtn) cancelBtn.disabled = false;
+    if (loadingEl) loadingEl.style.display = 'none';
 }
 
 async function confirmExport() {
@@ -2040,6 +2087,15 @@ async function confirmExport() {
         showNotification('Please select at least one export option (Images or Videos)', 'error');
         return;
     }
+
+    // Show loading state
+    const exportBtn = document.getElementById('export-btn');
+    const cancelBtn = document.getElementById('export-cancel-btn');
+    const loadingEl = document.getElementById('export-loading');
+    exportBtn.disabled = true;
+    exportBtn.textContent = 'Exporting...';
+    if (cancelBtn) cancelBtn.disabled = true;
+    if (loadingEl) loadingEl.style.display = 'block';
 
     try {
         const response = await fetch('/api/shots/export', {
@@ -2064,28 +2120,40 @@ async function confirmExport() {
     } catch (error) {
         console.error('Export failed:', error);
         showNotification('Export failed', 'error');
+    } finally {
+        // Reset loading state
+        exportBtn.disabled = false;
+        exportBtn.textContent = 'Export';
+        if (cancelBtn) cancelBtn.disabled = false;
+        if (loadingEl) loadingEl.style.display = 'none';
     }
 }
 
 // Video Playback Functions
 let currentVideoShotIndex = -1;
+let currentVideoAssetType = 'video';
 
 // Image Navigation Functions
 let currentImageShotIndex = -1;
 let currentImageAssetType = '';
 
-function playVideo(shotName, displayName) {
+function playVideo(shotName, displayName, assetType) {
+    assetType = assetType || 'video';
     const shot = shots.find(s => s.name === shotName);
-    if (!shot || !shot.video || !shot.video.file) {
-        showNotification('No video available for this shot', 'error');
+    const asset = shot && shot[assetType];
+    if (!asset || !asset.file) {
+        showNotification(`No ${assetType === 'alt_video' ? 'alt ' : ''}video available for this shot`, 'error');
         return;
     }
 
-    // Find the current shot index in the active shots array
-    const activeShots = shots.filter(s => !s.archived && s.video && s.video.file);
+    // Track which type we're viewing (for navigation)
+    currentVideoAssetType = assetType;
+
+    // Find the current shot index in the active shots array for this asset type
+    const activeShots = shots.filter(s => !s.archived && s[assetType] && s[assetType].file);
     currentVideoShotIndex = activeShots.findIndex(s => s.name === shotName);
 
-    const videoUrl = `/api/shots/video/${shotName}?v=${Date.now()}`;
+    const videoUrl = `/api/shots/video/${shotName}?type=${assetType}&v=${Date.now()}`;
     const videoPlayer = document.getElementById('video-player');
     const videoModalTitle = document.getElementById('video-modal-title');
     const videoVersion = document.getElementById('video-version');
@@ -2095,17 +2163,18 @@ function playVideo(shotName, displayName) {
     videoPlayer.src = videoUrl;
 
     // Set modal title and version
+    const typeLabel = assetType === 'alt_video' ? 'Alt Video' : '';
     if (displayName) {
-        videoModalTitle.innerHTML = `${escapeHtml(displayName)}<br><span style="font-size: 14px; opacity: 0.7; font-weight: normal;">(${shotName})</span>`;
+        videoModalTitle.innerHTML = `${escapeHtml(displayName)} ${typeLabel}<br><span style="font-size: 14px; opacity: 0.7; font-weight: normal;">(${shotName})</span>`;
     } else {
-        videoModalTitle.textContent = shotName;
+        videoModalTitle.textContent = `${shotName} ${typeLabel}`.trim();
     }
 
-    videoVersion.textContent = String(shot.video.current_version).padStart(3, '0');
+    videoVersion.textContent = String(asset.current_version).padStart(3, '0');
 
     // Set prompt text if available
-    if (shot.video.prompt) {
-        videoPrompt.textContent = shot.video.prompt;
+    if (asset.prompt) {
+        videoPrompt.textContent = asset.prompt;
         videoPrompt.style.display = 'block';
     } else {
         videoPrompt.textContent = '';
@@ -2126,26 +2195,28 @@ function playVideo(shotName, displayName) {
 }
 
 function navigateToNextShot() {
-    const activeShots = shots.filter(s => !s.archived && s.video && s.video.file);
+    const assetType = currentVideoAssetType || 'video';
+    const activeShots = shots.filter(s => !s.archived && s[assetType] && s[assetType].file);
     if (activeShots.length === 0 || currentVideoShotIndex === -1) return;
 
     const nextIndex = (currentVideoShotIndex + 1) % activeShots.length;
     const nextShot = activeShots[nextIndex];
     
     if (nextShot) {
-        playVideo(nextShot.name, nextShot.display_name || '');
+        playVideo(nextShot.name, nextShot.display_name || '', assetType);
     }
 }
 
 function navigateToPreviousShot() {
-    const activeShots = shots.filter(s => !s.archived && s.video && s.video.file);
+    const assetType = currentVideoAssetType || 'video';
+    const activeShots = shots.filter(s => !s.archived && s[assetType] && s[assetType].file);
     if (activeShots.length === 0 || currentVideoShotIndex === -1) return;
 
     const prevIndex = (currentVideoShotIndex - 1 + activeShots.length) % activeShots.length;
     const prevShot = activeShots[prevIndex];
     
     if (prevShot) {
-        playVideo(prevShot.name, prevShot.display_name || '');
+        playVideo(prevShot.name, prevShot.display_name || '', assetType);
     }
 }
 
@@ -2279,34 +2350,6 @@ function closeImageModal() {
     document.removeEventListener('keydown', handleImageModalKeydown);
 }
 
-// Close video modal when clicking outside
-document.addEventListener('click', function (event) {
-    const videoModal = document.getElementById('video-modal');
-    if (event.target === videoModal) {
-        closeVideoModal();
-    }
-});
-
-// Close video modal with Escape key
-document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape') {
-        const videoModal = document.getElementById('video-modal');
-        const imageModal = document.getElementById('image-modal');
-        if (videoModal.style.display === 'flex') {
-            closeVideoModal();
-        } else if (imageModal.style.display === 'flex') {
-            closeImageModal();
-        }
-    }
-});
-
-// Close image modal when clicking outside
-document.addEventListener('click', function (event) {
-    const imageModal = document.getElementById('image-modal');
-    if (event.target === imageModal) {
-        closeImageModal();
-    }
-});
 
 // Expose image functions globally
 window.showImage = showImage;

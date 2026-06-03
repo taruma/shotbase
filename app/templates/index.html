@@ -4,9 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shotbuddy</title>
+    <title>ShotBase • v{{ version }}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/visual-reorder.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/search-modal.css') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ url_for('static', filename='icons/apple-touch-icon.png') }}">
     <link rel="icon" type="image/png" sizes="32x32" href="{{ url_for('static', filename='icons/favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ url_for('static', filename='icons/favicon-16x16.png') }}">
@@ -17,45 +19,13 @@
     <!-- Floating Theme Toggle -->
     <button id="theme-toggle" class="dark-button icon-button floating-theme-toggle" title="Toggle dark/light theme" aria-label="Toggle dark/light theme">🌙</button>
     
-    <div class="menu-bar">
-        <div class="container">
-            <div class="setup-panel">
-                <button class="green-button" onclick="openProjectDialog()">
-                    Open Project...
-                </button>
-                <button class="dark-button" onclick="openCreateProjectModal()">
-                    New Project...
-                </button>
-                <div class="manual-path-fallback" id="manual-path-fallback">
-                    <input
-                        id="manual-path-input"
-                        class="path-input"
-                        type="text"
-                        placeholder="Enter full path to project folder"
-                    />
-                    <button class="dark-button" onclick="loadProjectFromManualPath()">
-                        Load from Path
-                    </button>
-                    <button class="dark-button" onclick="toggleManualPath()">
-                        Hide
-                    </button>
-                </div>
-                <div style="margin-top: 5px;">
-                    <button id="manual-path-toggle" class="link-button" onclick="toggleManualPath(); return false;" aria-expanded="false" aria-controls="manual-path-fallback">
-                        Manual path input...
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Setup Screen -->
     <div id="setup-screen" class="setup-screen">
         <div class="setup-card">
             <div class="logo-container" style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
-                <img src="{{ url_for('static', filename='icons/android-chrome-192x192.png') }}" alt="Shotbuddy Logo" class="logo-icon" style="height: 64px; width: 64px; margin-right: 15px;">
+                <img src="{{ url_for('static', filename='icons/android-chrome-192x192.png') }}" alt="ShotBase Logo" class="logo-icon" style="height: 64px; width: 64px; margin-right: 15px;">
                 <div class="logo-text" style="display: flex; flex-direction: column; align-items: flex-start; justify-content: center;">
-                    <h2 style="margin: 0; padding: 0; font-size: 2em; line-height: 1;">SHOTBUDDY</h2>
+                    <h2 style="margin: 0; padding: 0; font-size: 2em; line-height: 1;">SHOTBASE</h2>
                     <span class="version-text" style="font-size: 1em; color: #b5b5b5; margin-top: 5px; opacity: 1;">v{{ version }}</span>
                 </div>
             </div>
@@ -74,6 +44,26 @@
                 <h3 style="margin-bottom: 15px; color: #b5b5b5;">Recent Projects</h3>
                 <div id="recent-projects-list" class="recent-projects-list"></div>
             </div>
+            
+            <div class="manual-path-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid #333;">
+                <button id="manual-path-toggle" class="link-button" onclick="toggleManualPath(); return false;" aria-expanded="false" aria-controls="manual-path-fallback">
+                    Manual path input...
+                </button>
+                <div class="manual-path-fallback" id="manual-path-fallback" style="display: none; margin-top: 10px;">
+                    <input
+                        id="manual-path-input"
+                        class="path-input"
+                        type="text"
+                        placeholder="Enter full path to project folder"
+                    />
+                    <button class="dark-button" onclick="loadProjectFromManualPath()">
+                        Load from Path
+                    </button>
+                    <button class="dark-button" onclick="toggleManualPath()">
+                        Hide
+                    </button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -89,13 +79,13 @@
                         <div id="project-subtitle" class="project-subtitle"></div>
                     </div>
                     <div class="header-controls">
-                        <button class="dark-button icon-button" onclick="openShotsFolder()" title="Open Project Shots Folder" aria-label="Open Project Shots Folder">
-                            <img src="{{ url_for('static', filename='icons/folder_24.png') }}" alt="Open Project Shots Folder" />
-                        </button>
-                        <button class="dark-button icon-button" onclick="showSetupScreen()" title="Back to Menu" aria-label="Back to Menu">
+                        <button class="menu-button icon-button" onclick="showSetupScreen()" title="Back to Menu" aria-label="Back to Menu">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3"></path>
                             </svg>
+                        </button>
+                        <button class="dark-button icon-button" onclick="openShotsFolder()" title="Open Project Shots Folder" aria-label="Open Project Shots Folder">
+                            <img src="{{ url_for('static', filename='icons/folder_24.png') }}" alt="Open Project Shots Folder" />
                         </button>
                         <button class="dark-button icon-button" onclick="openProjectInfoModal()" title="Project Information" aria-label="Project Information">
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -115,6 +105,20 @@
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M21 12H3"></path>
                                 <path d="M16 7l-5 5 5 5"></path>
+                            </svg>
+                        </button>
+                        <button class="dark-button icon-button" onclick="openVisualReorderModal()" title="Visual Reorder" aria-label="Visual Reorder Shots">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                                <rect x="14" y="14" width="7" height="7" rx="1"/>
+                            </svg>
+                        </button>
+                        <button class="search-button icon-button" onclick="openSearchModal()" title="Search Project (Ctrl+Shift+F)" aria-label="Search Project">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
                             </svg>
                         </button>
                         <button class="green-button icon-button has-text" onclick="addNewShot()" title="Add New Shot" aria-label="Add New Shot">
@@ -137,6 +141,7 @@
                     <div class="grid-header-cell">First Frame</div>
                     <div class="grid-header-cell">Last Frame</div>
                     <div class="grid-header-cell">Video</div>
+                    <div class="grid-header-cell">Alt Video</div>
                     <div class="grid-header-cell">Notes</div>
                 </div>
                 <div id="shot-list"></div>
@@ -205,6 +210,56 @@
         </div>
     </div>
 
+    <!-- Search Modal -->
+    <div id="search-modal" class="modal">
+        <div class="modal-content search-modal-content">
+            <div class="modal-header">
+                <h3>Search Project</h3>
+                <button class="close-modal" onclick="closeSearchModal()">&times;</button>
+            </div>
+            <input id="search-input" type="text" class="search-input" placeholder="Search prompts, captions, notes..." autocomplete="off" />
+            <div class="search-filter-row">
+                <span class="search-filter-label">Content:</span>
+                <button class="search-filter-pill active" data-content-filter="all" onclick="setContentFilter('all', this)">All</button>
+                <button class="search-filter-pill" data-content-filter="prompt" onclick="setContentFilter('prompt', this)">Prompts</button>
+                <button class="search-filter-pill" data-content-filter="caption" onclick="setContentFilter('caption', this)">Captions</button>
+                <button class="search-filter-pill" data-content-filter="notes" onclick="setContentFilter('notes', this)">Notes</button>
+                <span class="search-filter-sep"></span>
+                <span class="search-filter-label">Shots:</span>
+                <button class="search-filter-pill active" data-archive-filter="all" onclick="setArchiveFilter('all', this)">All Shots</button>
+                <button class="search-filter-pill" data-archive-filter="active" onclick="setArchiveFilter('active', this)">Active</button>
+                <button class="search-filter-pill" data-archive-filter="archived" onclick="setArchiveFilter('archived', this)">Archived</button>
+            </div>
+            <div id="search-results" class="search-results">
+                <p class="search-placeholder">Type to search across all shots...</p>
+            </div>
+            <div id="search-stats" class="search-stats"></div>
+            <p class="search-shortcut-hint">Pro tip: press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd> to open search</p>
+        </div>
+    </div>
+
+    <!-- Visual Reorder Modal -->
+    <div id="visual-reorder-modal" class="modal">
+        <div class="modal-content visual-reorder-content">
+            <div class="modal-header">
+                <h3>Visual Reorder</h3>
+                <button class="close-modal" onclick="closeVisualReorderModal()">&times;</button>
+            </div>
+            <div class="visual-reorder-thumbnail-selector">
+                <button class="pill-button active" data-thumb-type="video" onclick="switchVisualThumbType('video', this)">Video</button>
+                <button class="pill-button" data-thumb-type="first_image" onclick="switchVisualThumbType('first_image', this)">First Frame</button>
+                <button class="pill-button" data-thumb-type="last_image" onclick="switchVisualThumbType('last_image', this)">Last Frame</button>
+                <button class="pill-button" data-thumb-type="alt_video" onclick="switchVisualThumbType('alt_video', this)">Alt Video</button>
+            </div>
+            <input id="visual-reorder-filter" type="text" class="toc-filter" placeholder="Filter shots...">
+            <div id="visual-reorder-grid" class="visual-reorder-grid"></div>
+            <div class="modal-buttons">
+                <button class="green-button" onclick="saveVisualReorder()">Save</button>
+                <button class="dark-button" onclick="closeVisualReorderModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Project Information Modal -->
     <div id="project-info-modal" class="modal">
         <div class="modal-content" style="max-width: 600px;">
@@ -260,43 +315,48 @@
                     <input id="export-name" type="text" placeholder="Leave empty for timestamp" class="form-input" />
                 </div>
 
-                <div class="form-section">
-                    <label class="form-label">Export Options</label>
-                    <div class="export-options-group">
-                        <label class="checkbox-label">
+                <div class="export-section">
+                    <div class="export-section-label">Export Type</div>
+                    <div class="export-checkbox-row">
+                        <label class="checkbox-label checkbox-inline">
                             <input id="export-images" type="checkbox" checked class="export-checkbox" />
                             <span class="checkbox-custom"></span>
-                            <span class="checkbox-text">Export Images</span>
+                            <span class="checkbox-text">Images</span>
                         </label>
-                        <label class="checkbox-label">
+                        <label class="checkbox-label checkbox-inline">
                             <input id="export-videos" type="checkbox" checked class="export-checkbox" />
                             <span class="checkbox-custom"></span>
-                            <span class="checkbox-text">Export Videos</span>
+                            <span class="checkbox-text">Videos</span>
                         </label>
                     </div>
                 </div>
 
-                <div class="form-section">
-                    <label class="form-label">Additional Options</label>
-                    <div class="additional-options-group">
-                        <label class="checkbox-label">
-                            <input id="include-display-in-filename" type="checkbox" checked class="export-checkbox" />
-                            <span class="checkbox-custom"></span>
-                            <span class="checkbox-text">Include display name in filenames</span>
-                        </label>
-                        <label class="checkbox-label">
-                            <input id="include-metadata" type="checkbox" checked class="export-checkbox" />
-                            <span class="checkbox-custom"></span>
-                            <span class="checkbox-text">Include metadata summary (.md file)</span>
-                        </label>
-                    </div>
+                <div class="export-section">
+                    <div class="export-section-label">Options</div>
+                    <label class="checkbox-label">
+                        <input id="include-display-in-filename" type="checkbox" checked class="export-checkbox" />
+                        <span class="checkbox-custom"></span>
+                        <span class="checkbox-text">Include display name in filenames</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input id="include-metadata" type="checkbox" checked class="export-checkbox" />
+                        <span class="checkbox-custom"></span>
+                        <span class="checkbox-text">Include metadata summary (.md)</span>
+                    </label>
                 </div>
             </div>
 
-            <div class="modal-buttons">
-                <button class="green-button" onclick="confirmExport()">Export</button>
-                <button class="dark-button" onclick="closeExportModal()">Cancel</button>
+            <div class="export-actions">
+                <button class="dark-button export-folder-btn" onclick="openExportsFolder()">
+                    <img src="{{ url_for('static', filename='icons/folder_24.png') }}" alt="" style="width: 16px; height: 16px; margin-right: 8px; vertical-align: middle;" />
+                    Open Exports Folder
+                </button>
+                <div class="modal-buttons">
+                    <button id="export-btn" class="green-button" onclick="confirmExport()">Export</button>
+                    <button id="export-cancel-btn" class="dark-button" onclick="closeExportModal()">Cancel</button>
+                </div>
             </div>
+            <div id="export-loading" class="export-loading" style="display: none;">Exporting assets... please wait.</div>
         </div>
     </div>
 
@@ -365,5 +425,8 @@
     
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/visual-reorder.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/search-modal.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/modal-behavior.js') }}"></script>
 </body>
 </html>

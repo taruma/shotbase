@@ -4,11 +4,6 @@ body.light {
     color: #1a1a1a;
 }
 
-.light .menu-bar {
-    background: #fefefe;
-    border-bottom: 1px solid #ddd;
-}
-
 .light .dark-button {
     background: #e0e0e0;
     color: #1a1a1a;
@@ -16,6 +11,15 @@ body.light {
 
 .light .dark-button:hover {
     background: #d0d0d0;
+}
+
+.light .menu-button {
+    background: #5a85c0;
+    color: #ffffff;
+}
+
+.light .menu-button:hover {
+    background: #6b9ad8;
 }
 
 .light .header {
@@ -370,6 +374,14 @@ body.light {
 }
 
 /* Light Theme Overrides for TOC */
+.light .toc-archived-header {
+    color: #777;
+}
+
+.light .toc-archived-header:hover {
+    color: #000;
+}
+
 .light .shot-toc {
     background: #ffffff;
     border: 1px solid #ddd;
@@ -490,14 +502,14 @@ body.light {
 
 .recent-projects-section {
     margin-top: 30px;
-    max-width: 600px;
+    max-width: none;
     margin-left: auto;
     margin-right: auto;
 }
 
 .recent-projects-list {
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 10px;
 }
 
@@ -513,6 +525,8 @@ body.light {
 
 .recent-project-info {
     flex: 1;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .recent-project-name {
@@ -523,7 +537,9 @@ body.light {
 .recent-project-path {
     font-size: 12px;
     color: #b5b5b5;
-    word-break: break-all;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .manual-path-fallback {
@@ -540,6 +556,11 @@ body.light {
 
 .light .recent-project-path {
     color: #777;
+}
+
+/* Light Theme Overrides for manual path section inside setup card */
+.light .manual-path-section {
+    border-top-color: #ddd !important;
 }
 
 /* Light Theme Overrides for link-button */

@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from app.config.constants import PROJECTS_FILE
+from app.config.constants import MAX_RECENT_PROJECTS, PROJECTS_FILE
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +34,7 @@ class ProjectManager:
                         self.projects['current_project'] = str(Path(self.projects['current_project']).resolve())
                     self.projects['recent_projects'] = [
                         str(Path(p).resolve()) for p in self.projects.get('recent_projects', [])
-                    ][:3]  # Limit to 3 recent projects
+                    ][:MAX_RECENT_PROJECTS]  # Limit recent projects
                     loaded_scanned = self.projects.get('last_scanned', {})
                     self.projects['last_scanned'] = {
                         str(Path(p).resolve()): ts for p, ts in loaded_scanned.items()
@@ -296,7 +296,7 @@ class ProjectManager:
         if path_str in self.projects['recent_projects']:
             self.projects['recent_projects'].remove(path_str)
         self.projects['recent_projects'].insert(0, path_str)
-        self.projects['recent_projects'] = self.projects['recent_projects'][:3]
+        self.projects['recent_projects'] = self.projects['recent_projects'][:MAX_RECENT_PROJECTS]
 
         # Update the last_scanned timestamp
         self.projects['last_scanned'][path_str] = datetime.now().isoformat()

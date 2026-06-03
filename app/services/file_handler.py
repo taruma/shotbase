@@ -49,15 +49,14 @@ class FileHandler:
 
         # Normalize/validate file type and extension
         is_image_type = file_type in {'image', 'first_image', 'last_image'}
-        is_video_type = file_type == 'video'
-        is_lipsync_type = file_type in {'driver', 'target', 'result'}
+        is_video_type = file_type in {'video', 'alt_video'}
 
         if is_image_type and file_ext not in ALLOWED_IMAGE_EXTENSIONS:
             raise ValueError(f"Invalid image format. Allowed: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}")
-        if (is_video_type or is_lipsync_type) and file_ext not in ALLOWED_VIDEO_EXTENSIONS:
+        if is_video_type and file_ext not in ALLOWED_VIDEO_EXTENSIONS:
             raise ValueError(f"Invalid video format. Allowed: {', '.join(ALLOWED_VIDEO_EXTENSIONS)}")
 
-        if not (is_image_type or is_video_type or is_lipsync_type):
+        if not (is_image_type or is_video_type):
             raise ValueError("Invalid file_type")
 
         if not shot_dir.exists():
@@ -114,7 +113,7 @@ class FileHandler:
 
         elif is_video_type:
             wip_dir = shot_dir / 'videos'
-            base = shot_name
+            base = f'{shot_name}_alt' if file_type == 'alt_video' else shot_name
             version = self.get_next_version(wip_dir, base, file_ext)
 
             wip_filename = f'{base}_v{version:03d}{file_ext}'
@@ -131,31 +130,11 @@ class FileHandler:
             shutil.copy2(str(wip_path), str(final_path))
             # Update current version marker so UI shows the promoted version correctly
             try:
-                manager.set_current_version(shot_name, 'video', version)
+                manager.set_current_version(shot_name, file_type, version)
             except Exception as e:
                 logger.warning("Failed to set current version marker: %s", e)
 
             # Thumbnails for videos
-            thumbnail_path = self.create_video_thumbnail(str(final_path), base)
-
-        else:
-            # lipsync driver/target/result
-            dest_dir = shot_dir / 'lipsync'
-            dest_dir.mkdir(exist_ok=True)
-            base = f'{shot_name}_{file_type}'
-            version = self.get_next_version(dest_dir, base, file_ext)
-            wip_filename = f'{base}_v{version:03d}{file_ext}'
-            wip_path = dest_dir / wip_filename
-            file.save(str(wip_path))
-
-            final_path = dest_dir / f'{base}{file_ext}'
-            for existing_file in dest_dir.glob(f'{base}.*'):
-                if existing_file != wip_path:
-                    existing_file.unlink()
-
-            shutil.copy2(str(wip_path), str(final_path))
-
-            # Thumbnails for lipsync videos
             thumbnail_path = self.create_video_thumbnail(str(final_path), base)
 
         return {
