@@ -32,8 +32,11 @@ This version of ShotBase is packed with features designed to make your workflow 
 
 ### 🆕 What's New in v4
 - **Shot Search** — Press Ctrl+Shift+F to search across all shots' prompts, captions, notes, and names. Filter by content type and archive status for quick shot discovery.
+  ![Shot Search](https://github.com/user-attachments/assets/4d1acc72-3132-410c-b90d-6935a1a99f44)
 - **Visual Reorder Grid** — Drag-and-drop shot sorting with a responsive 5-column layout, thumbnail type switching, video preview, and inline display name editing.
+  ![Visual Reorder Grid](https://github.com/user-attachments/assets/621593bb-5932-4ef8-a986-84d858bac6e8)
 - **Alternative Video Asset** — New `alt_video` type for storing reference footage, upscales, or any additional video variant alongside your main video.
+  ![Alternative Video Asset](https://github.com/user-attachments/assets/05848b1a-bfbe-4d19-bd7a-2c4059577f54)
 - **Export Enhancements** — Display name columns now included in markdown exports, alt video assets exported, and a new "Open Exports Folder" button for quick access.
 - **UI Polish** — Sticky header stays visible on scroll, browser tab shows dynamic project title, and the table of contents has a collapsible archived section.
 - **Performance** — Thumbnails generated lazily on first request, and version scans cached per shot for faster page loads.
