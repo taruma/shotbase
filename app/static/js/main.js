@@ -2129,6 +2129,43 @@ async function confirmExport() {
     }
 }
 
+function copyShotOrder() {
+    const activeShots = shots.filter(s => !s.archived);
+    if (activeShots.length === 0) {
+        showNotification('No active shots to copy', 'error');
+        return;
+    }
+
+    const lines = activeShots.map((shot, i) => {
+        const num = String(i + 1).padStart(String(activeShots.length).length, '0');
+        if (shot.display_name) {
+            return `${num}. ${shot.name} — ${shot.display_name}`;
+        }
+        return `${num}. ${shot.name}`;
+    });
+
+    const text = lines.join('\n');
+
+    navigator.clipboard.writeText(text).then(() => {
+        showNotification(`Copied ${activeShots.length} shots to clipboard!`);
+    }).catch(() => {
+        // Fallback for browsers that don't support clipboard API
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showNotification(`Copied ${activeShots.length} shots to clipboard!`);
+        } catch (e) {
+            showNotification('Failed to copy to clipboard', 'error');
+        }
+        document.body.removeChild(textarea);
+    });
+}
+
 // Video Playback Functions
 let currentVideoShotIndex = -1;
 let currentVideoAssetType = 'video';

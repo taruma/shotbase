@@ -347,10 +347,13 @@
             </div>
 
             <div class="export-actions">
-                <button class="dark-button export-folder-btn" onclick="openExportsFolder()">
-                    <img src="{{ url_for('static', filename='icons/folder_24.png') }}" alt="" style="width: 16px; height: 16px; margin-right: 8px; vertical-align: middle;" />
-                    Open Exports Folder
-                </button>
+                <div class="export-utility-row">
+                    <button class="dark-button export-folder-btn" onclick="openExportsFolder()">
+                        <img src="{{ url_for('static', filename='icons/folder_24.png') }}" alt="" style="width: 16px; height: 16px; margin-right: 8px; vertical-align: middle;" />
+                        Open Exports Folder
+                    </button>
+                    <button id="copy-order-btn" class="dark-button export-folder-btn" onclick="copyShotOrder()" title="Copy shot order list to clipboard">📋 Copy Shot Order</button>
+                </div>
                 <div class="modal-buttons">
                     <button id="export-btn" class="green-button" onclick="confirmExport()">Export</button>
                     <button id="export-cancel-btn" class="dark-button" onclick="closeExportModal()">Cancel</button>
