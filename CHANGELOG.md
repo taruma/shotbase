@@ -1,5 +1,11 @@
 # Changelog
 
+## v4.1.0 (June 4, 2026) - by Taruma Sakti
+
+### Added
+- **Copy Shot Order button** in the export modal: copies a numbered, ordered list of all active shots (with display names if set) to the clipboard. Useful as a quick reference when working in external editors (e.g. Premiere Pro) where only SHXXX filenames are visible. Output format: `01. SH001 — Opening Scene`.
+- **Export modal two-row button layout**: utility actions (Open Exports Folder, Copy Shot Order) in the first row spaced evenly; primary actions (Export, Cancel) centered in the second row. Layout uses new `.export-utility-row` CSS class with `flex-direction: column` on `.export-actions`.
+
 ## v4.0.1 (June 3, 2026) - by Taruma Sakti
 
 ### Removed

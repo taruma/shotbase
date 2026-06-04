@@ -4,7 +4,7 @@
 
 | Item | Value |
 |---|---|
-| **Version** | 4.0.0 |
+| **Version** | 4.1.0 |
 | **Git Branch** | `main` |
 | **Python Requirement** | ≥3.13.1 |
 | **Default Host:Port** | 127.0.0.1:5001 |
@@ -366,12 +366,13 @@ Key patterns:
 - TOC (Table of Contents): side panel rendered dynamically, supports filter/search, persists open/close state, collapsible archived section
 - File upload: uses `FormData` with `file`, `shot_name`, `file_type` fields; shows loading states
 - Cache busting: appends `?t=timestamp` to media URLs
-- Modals: image/video viewers with keyboard arrow navigation; export modal with media type checkboxes; search modal with Ctrl+Shift+F shortcut; visual reorder modal with SortableJS
+- Modals: image/video viewers with keyboard arrow navigation; export modal with media type checkboxes and two-row button layout (utility row + centered actions); search modal with Ctrl+Shift+F shortcut; visual reorder modal with SortableJS
+- Clipboard: `copyShotOrder()` copies a zero-padded numbered list of active shots (`01. SH001 — Display Name`) to clipboard for reference in external editors
 - Drag-and-drop: custom implementation for shot reordering with grip handle; SortableJS for visual reorder grid
 - Dynamic page title: browser tab updates with project info and app version on screen transitions
 
 ### CSS Organization
-- `main.css`: base layout, dark theme, shot grid, TOC panel, modals, tooltips, buttons, sticky header, drag-drop
+- `main.css`: base layout, dark theme, shot grid, TOC panel, modals, tooltips, buttons, sticky header, drag-drop; `.export-utility-row` for export modal utility button spacing
 - `styles.css`: light theme overrides only (loaded after main.css)
 - `search-modal.css`: search modal layout, filter pills, snippet styling, keyboard focus
 - `visual-reorder.css`: responsive 5-column grid, cards, thumbnail selectors, preview/edit mode styles
