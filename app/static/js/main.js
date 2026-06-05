@@ -903,6 +903,7 @@ function displayAssetLabel(type) {
 
 function createDropZone(shot, type) {
     const file = shot[type];
+    const escDn = (shot.display_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const currentVersion = (file && (file.current_version || file.max_version)) || 0;
     const maxVersion = (file && file.max_version) || 0;
     const hasFile = maxVersion > 0 || currentVersion > 0;
@@ -916,10 +917,10 @@ function createDropZone(shot, type) {
             const videoStyle = thumbnailUrl ?
                 `background-image: url('${thumbnailUrl}'); background-size: cover; background-position: center;` :
                 'background: #404040;';
-            mediaHtml = `<div class="preview-thumbnail video-thumbnail" style="${videoStyle}" onclick="playVideo('${shot.name}', '${shot.display_name || ''}', '${type}')"></div>`;
+            mediaHtml = `<div class="preview-thumbnail video-thumbnail" style="${videoStyle}" onclick="playVideo('${shot.name}', '${escDn}', '${type}')"></div>`;
         } else {
             mediaHtml = thumbnailUrl ?
-                `<img class="preview-thumbnail" src="${thumbnailUrl}" alt="${displayAssetLabel(type)} thumbnail" onclick="showImage('${shot.name}', '${shot.display_name || ''}', '${type}')">` :
+                `<img class="preview-thumbnail" src="${thumbnailUrl}" alt="${displayAssetLabel(type)} thumbnail" onclick="showImage('${shot.name}', '${escDn}', '${type}')">` :
                 `<div class="preview-thumbnail placeholder"></div>`;
         }
 

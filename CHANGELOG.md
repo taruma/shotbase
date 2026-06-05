@@ -6,6 +6,9 @@
 - **Copy Shot Order button** in the export modal: copies a numbered, ordered list of all active shots (with display names if set) to the clipboard. Useful as a quick reference when working in external editors (e.g. Premiere Pro) where only SHXXX filenames are visible. Output format: `01. SH001 — Opening Scene`.
 - **Export modal two-row button layout**: utility actions (Open Exports Folder, Copy Shot Order) in the first row spaced evenly; primary actions (Export, Cancel) centered in the second row. Layout uses new `.export-utility-row` CSS class with `flex-direction: column` on `.export-actions`.
 
+### Fixed
+- **Thumbnail Click Broken for Display Names with Quotes**: Fixed a bug where clicking a video or image thumbnail silently failed when the shot's display name contained a single quote (e.g., "Ocean's Secret"). The unescaped quote broke the inline JavaScript `onclick` handler, producing a syntax error that prevented the preview modal from opening. Display names are now escaped before interpolation into `onclick` attributes in `createDropZone`.
+
 ## v4.0.1 (June 3, 2026) - by Taruma Sakti
 
 ### Removed
