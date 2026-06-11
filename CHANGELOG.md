@@ -9,6 +9,7 @@
 
 ### Fixed
 - **Thumbnail Click Broken for Display Names with Quotes**: Fixed a bug where clicking a video or image thumbnail silently failed when the shot's display name contained a single quote (e.g., "Ocean's Secret"). The unescaped quote broke the inline JavaScript `onclick` handler, producing a syntax error that prevented the preview modal from opening. Display names are now escaped before interpolation into `onclick` attributes in `createDropZone`.
+- **Unnecessary Page Rebuilds on Archive/Display Name Edit**: Removed full DOM re-renders from `archiveShot()` and `saveDisplayName()` that caused the entire shot grid to flash/repaint on every archive/unarchive or display name edit. These operations now update only the affected element directly — the archive button SVG icon flips instantly, and the display name text updates inline. Notification reminds users to press F5 to refresh layout after bulk archiving. All other operations (create, rename, upload, reorder, export) are unaffected.
 
 ## v4.0.1 (June 3, 2026) - by Taruma Sakti
 

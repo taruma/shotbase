@@ -1466,9 +1466,18 @@ async function saveDisplayName(shotName, displayName) {
             if (idx !== -1) {
                 shots[idx] = result.data;
             }
-            captureScroll(`shot-row-${shotName}`);
-            renderShots();
-            restoreScroll();
+            // Update display name text directly on the row
+            const row = document.getElementById(`shot-row-${shotName}`);
+            if (row) {
+                const labelEl = row.querySelector('.shot-name');
+                if (labelEl) {
+                    labelEl.dataset.displayName = displayName;
+                    const shot = shots[idx];
+                    labelEl.innerHTML = displayName
+                        ? `${escapeHtml(displayName)}<div class="shot-code">(${shotName})</div>`
+                        : shotName;
+                }
+            }
         } else {
             showNotification(result.error || 'Failed to update display name', 'error');
         }
@@ -1504,14 +1513,29 @@ async function archiveShot(shotName, archived) {
         });
         const result = await response.json();
         if (result.success) {
-            showNotification(archived ? `Archived ${shotName}` : `Unarchived ${shotName}`);
             const idx = shots.findIndex(s => s.name === shotName);
             if (idx !== -1) {
                 shots[idx] = result.data;
             }
-            captureScroll(`shot-row-${shotName}`);
-            renderShots();
-            restoreScroll();
+            // Flip the archive/unarchive button icon on the row
+            const row = document.getElementById(`shot-row-${shotName}`);
+            if (row) {
+                const btn = row.querySelector('.action-cell .icon-btn');
+                if (btn) {
+                    if (archived) {
+                        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="7 14 12 9 17 14"></polyline><line x1="12" y1="9" x2="12" y2="21"></line><rect x="3" y="3" width="18" height="6" rx="2"></rect></svg>';
+                        btn.title = 'Unarchive';
+                        btn.setAttribute('aria-label', 'Unarchive');
+                        row.classList.add('archived');
+                    } else {
+                        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line><rect x="3" y="15" width="18" height="6" rx="2"></rect></svg>';
+                        btn.title = 'Archive';
+                        btn.setAttribute('aria-label', 'Archive');
+                        row.classList.remove('archived');
+                    }
+                }
+            }
+            showNotification(archived ? `Archived ${shotName}. Refresh page (F5) to sort.` : `Unarchived ${shotName}. Refresh page (F5) to sort.`);
         } else {
             showNotification(result.error || 'Failed to update archive state', 'error');
         }
