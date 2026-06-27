@@ -841,6 +841,10 @@ class ShotManager:
             _ = self.get_thumbnail_path(final_path, shot_name)
             return self._normalize_path(final_path)
 
+        # Audio
+        if asset_type == 'audio':
+            return self.promote_audio_asset(shot_name, int(version))
+
         # Video & Alt Video
         wip_dir = shot_dir / 'videos'
         if not wip_dir.exists():
