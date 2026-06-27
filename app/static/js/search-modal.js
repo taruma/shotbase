@@ -58,6 +58,14 @@ function buildSearchIndex() {
             if (caption) items.push({ field: 'Alt Video Caption', text: caption, badgeType: 'caption', assetLabel: 'Alt Video' });
         }
 
+        // Audio: prompt + caption
+        if (shot.audio) {
+            var prompt = (shot.audio.prompt || '').trim();
+            var caption = (shot.audio.caption || '').trim();
+            if (prompt) items.push({ field: 'Audio Prompt', text: prompt, badgeType: 'prompt', assetLabel: 'Audio' });
+            if (caption) items.push({ field: 'Audio Caption', text: caption, badgeType: 'caption', assetLabel: 'Audio' });
+        }
+
         // Notes
         var notes = (shot.notes || '').trim();
         if (notes) items.push({ field: 'Notes', text: notes, badgeType: 'notes-badge', assetLabel: '' });
