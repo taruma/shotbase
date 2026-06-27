@@ -493,7 +493,7 @@ def export_latest_assets():
         include_display_in_filename = data.get("include_display_in_filename", True)
         include_metadata = data.get("include_metadata", True)
 
-        if export_type not in ['images', 'videos', 'all']:
+        if export_type not in ['images', 'videos', 'audio', 'all']:
             return jsonify({"success": False, "error": "Invalid export_type"}), 400
 
         project_manager = current_app.config['PROJECT_MANAGER']
@@ -577,6 +577,33 @@ def serve_image(shot_name, asset_type):
         # Serve the image file with proper headers
         resp = send_file(str(image_file))
         resp.headers["Content-Disposition"] = f'inline; filename="{image_file.name}"'
+        resp.headers["Cache-Control"] = "public, max-age=3600"
+        return resp
+    except Exception as e:
+        return str(e), 500
+
+@shot_bp.route("/audio/<shot_name>")
+def serve_audio(shot_name):
+    """Serve the promoted audio file for a shot from latest_audio directory."""
+    try:
+        project_manager = current_app.config['PROJECT_MANAGER']
+        project = project_manager.get_current_project()
+        if not project:
+            return "No current project", 400
+
+        shot_manager = get_shot_manager(project["path"])
+        shot_info = shot_manager.get_shot_info(shot_name)
+
+        audio_path = shot_info['audio']['file']
+        if not audio_path:
+            return "No audio found for this shot", 404
+
+        audio_file = Path(audio_path)
+        if not audio_file.exists():
+            return "Audio file not found", 404
+
+        resp = send_file(str(audio_file))
+        resp.headers["Content-Disposition"] = f'inline; filename="{audio_file.name}"'
         resp.headers["Cache-Control"] = "public, max-age=3600"
         return resp
     except Exception as e:

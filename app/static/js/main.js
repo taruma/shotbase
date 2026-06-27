@@ -876,6 +876,7 @@ function createShotRow(shot) {
                 ${createDropZone(shot, 'last_image')}
                 ${createDropZone(shot, 'video')}
                 ${createDropZone(shot, 'alt_video')}
+                ${createDropZone(shot, 'audio')}
                 <div class="notes-cell">
                     <textarea class="notes-input" 
                               placeholder="Add notes..." 
@@ -896,6 +897,7 @@ function displayAssetLabel(type) {
         case 'last_image': return 'Last Frame';
         case 'video': return 'Video';
         case 'alt_video': return 'Alt Video';
+        case 'audio': return 'Audio';
         default:
             return type.charAt(0).toUpperCase() + type.slice(1);
     }
@@ -910,10 +912,13 @@ function createDropZone(shot, type) {
 
     if (hasFile) {
         const isVideo = type === 'video' || type === 'alt_video';
+        const isAudio = type === 'audio';
         const thumbnailUrl = file.thumbnail ? `${file.thumbnail}?v=${Date.now()}` : null;
 
         let mediaHtml;
-        if (isVideo) {
+        if (isAudio) {
+            mediaHtml = `<div class="preview-thumbnail audio-thumbnail" onclick="playAudio('${shot.name}', '${escDn}')">&#9835;</div>`;
+        } else if (isVideo) {
             const videoStyle = thumbnailUrl ?
                 `background-image: url('${thumbnailUrl}'); background-size: cover; background-position: center;` :
                 'background: #404040;';
@@ -1049,6 +1054,7 @@ async function uploadFile(file, shotName, fileType) {
     else if (fileType === 'last_image') dropZoneIndex = 3;
     else if (fileType === 'video') dropZoneIndex = 4;
     else if (fileType === 'alt_video') dropZoneIndex = 5;
+    else if (fileType === 'audio') dropZoneIndex = 6;
     else return; // Invalid type
     const dropZone = row.children[dropZoneIndex];
     if (!dropZone || !dropZone.classList.contains('drop-zone')) {
@@ -1176,16 +1182,18 @@ function updateDropZoneForShot(shotName, assetType, shotData) {
     if (!shotRow) return;
 
     // Get the drop zone based on asset type - they appear in specific order after action-cell:
-    // [0] action-cell, [1] shot-name, [2] first_image, [3] last_image, [4] video, [5] alt_video, [6] notes
+    // [0] action-cell, [1] shot-name, [2] first_image, [3] last_image, [4] video, [5] alt_video, [6] audio, [7] notes
     let dropZone = null;
     if (assetType === 'first_image') {
-        dropZone = shotRow.children[2]; // first child after action and name
+        dropZone = shotRow.children[2];
     } else if (assetType === 'last_image') {
         dropZone = shotRow.children[3];
     } else if (assetType === 'video') {
         dropZone = shotRow.children[4];
     } else if (assetType === 'alt_video') {
         dropZone = shotRow.children[5];
+    } else if (assetType === 'audio') {
+        dropZone = shotRow.children[6];
     }
 
     if (!dropZone || !dropZone.classList.contains('drop-zone')) return;
@@ -1236,6 +1244,7 @@ function replaceDropZoneForShot(shotName, assetType, shotData) {
     else if (assetType === 'last_image') dropZoneIndex = 3;
     else if (assetType === 'video') dropZoneIndex = 4;
     else if (assetType === 'alt_video') dropZoneIndex = 5;
+    else if (assetType === 'audio') dropZoneIndex = 6;
     else return;
 
     const oldDropZone = shotRow.children[dropZoneIndex];
@@ -1352,9 +1361,11 @@ function getFileType(filename) {
     const ext = filename.toLowerCase().split('.').pop();
     const imageExts = ['jpg', 'jpeg', 'png', 'webp'];
     const videoExts = ['mp4', 'mov'];
+    const audioExts = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
 
     if (imageExts.includes(ext)) return 'first_image'; // default image target
     if (videoExts.includes(ext)) return 'video';
+    if (audioExts.includes(ext)) return 'audio';
     return null;
 }
 
@@ -1365,6 +1376,8 @@ function openFileDialog(shotName, fileType) {
         input.accept = 'image/*';
     } else if (fileType === 'video' || fileType === 'alt_video') {
         input.accept = 'video/*';
+    } else if (fileType === 'audio') {
+        input.accept = 'audio/*';
     }
     input.style.display = 'none';
     input.addEventListener('change', () => {
@@ -1699,7 +1712,7 @@ async function savePrompt() {
         } else {
             const shot = shots.find(s => s.name === shotName);
             if (shot) {
-                if (assetType === 'first_image' || assetType === 'last_image' || assetType === 'image' || assetType === 'video' || assetType === 'alt_video') {
+                if (assetType === 'first_image' || assetType === 'last_image' || assetType === 'image' || assetType === 'video' || assetType === 'alt_video' || assetType === 'audio') {
                     const key = assetType === 'image' ? 'first_image' : assetType; // legacy map
                     if (shot[key]) {
                         shot[key].prompt = promptText;
@@ -2413,11 +2426,109 @@ function closeImageModal() {
 }
 
 
+// Audio Playback Functions
+let currentAudioShotIndex = -1;
+
+function playAudio(shotName, displayName) {
+    const shot = shots.find(s => s.name === shotName);
+    const asset = shot && shot.audio;
+    if (!asset || !asset.file) {
+        showNotification('No audio available for this shot', 'error');
+        return;
+    }
+
+    const activeShots = shots.filter(s => !s.archived && s.audio && s.audio.file);
+    currentAudioShotIndex = activeShots.findIndex(s => s.name === shotName);
+
+    const audioUrl = `/api/shots/audio/${shotName}?v=${Date.now()}`;
+    const audioPlayer = document.getElementById('audio-player');
+    const audioModalTitle = document.getElementById('audio-modal-title');
+    const audioVersion = document.getElementById('audio-version');
+    const audioPrompt = document.getElementById('audio-prompt');
+
+    audioPlayer.src = audioUrl;
+
+    if (displayName) {
+        audioModalTitle.innerHTML = `${escapeHtml(displayName)} Audio<br><span style="font-size: 14px; opacity: 0.7; font-weight: normal;">(${shotName})</span>`;
+    } else {
+        audioModalTitle.textContent = `${shotName} Audio`;
+    }
+
+    audioVersion.textContent = String(asset.current_version).padStart(3, '0');
+
+    if (asset.prompt) {
+        audioPrompt.textContent = asset.prompt;
+        audioPrompt.style.display = 'block';
+    } else {
+        audioPrompt.textContent = '';
+        audioPrompt.style.display = 'none';
+    }
+
+    document.getElementById('audio-modal').style.display = 'flex';
+    document.addEventListener('keydown', handleAudioModalKeydown);
+
+    audioPlayer.load();
+    audioPlayer.play().catch(e => {
+        console.log('Audio autoplay prevented:', e);
+    });
+}
+
+function navigateToNextAudio() {
+    const activeShots = shots.filter(s => !s.archived && s.audio && s.audio.file);
+    if (activeShots.length === 0 || currentAudioShotIndex === -1) return;
+    const nextIndex = (currentAudioShotIndex + 1) % activeShots.length;
+    const nextShot = activeShots[nextIndex];
+    if (nextShot) {
+        playAudio(nextShot.name, nextShot.display_name || '');
+    }
+}
+
+function navigateToPreviousAudio() {
+    const activeShots = shots.filter(s => !s.archived && s.audio && s.audio.file);
+    if (activeShots.length === 0 || currentAudioShotIndex === -1) return;
+    const prevIndex = (currentAudioShotIndex - 1 + activeShots.length) % activeShots.length;
+    const prevShot = activeShots[prevIndex];
+    if (prevShot) {
+        playAudio(prevShot.name, prevShot.display_name || '');
+    }
+}
+
+function handleAudioModalKeydown(event) {
+    const audioModal = document.getElementById('audio-modal');
+    if (audioModal.style.display !== 'flex') return;
+    switch (event.key) {
+        case 'ArrowLeft':
+            event.preventDefault();
+            navigateToPreviousAudio();
+            break;
+        case 'ArrowRight':
+            event.preventDefault();
+            navigateToNextAudio();
+            break;
+    }
+}
+
+function closeAudioModal() {
+    const audioModal = document.getElementById('audio-modal');
+    const audioPlayer = document.getElementById('audio-player');
+    audioModal.style.display = 'none';
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+    audioPlayer.src = '';
+    document.removeEventListener('keydown', handleAudioModalKeydown);
+}
+
 // Expose image functions globally
 window.showImage = showImage;
 window.closeImageModal = closeImageModal;
 window.navigateToNextImage = navigateToNextImage;
 window.navigateToPreviousImage = navigateToPreviousImage;
+
+// Expose audio functions globally
+window.playAudio = playAudio;
+window.closeAudioModal = closeAudioModal;
+window.navigateToNextAudio = navigateToNextAudio;
+window.navigateToPreviousAudio = navigateToPreviousAudio;
 
 // Expose functions globally
 window.openProjectInfoModal = openProjectInfoModal;
