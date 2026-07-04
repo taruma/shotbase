@@ -18,6 +18,9 @@
 ### Changed
 - **Notification Position**: Notifications moved from `top: 20px` to `bottom: 20px` with a `translateY(20px)` slide-up animation on show/hide, preventing overlap with the sticky header navigation bar.
 
+### AI Development Attribution
+This release was developed with AI assistance using Deepseek V4 pro with Cline in Plan and Act mode. All generated changes were manually reviewed, tested, and refined by the maintainer, Taruma Sakti, to ensure quality and alignment with project goals.
+
 ## v4.0.1 (June 3, 2026) - by Taruma Sakti
 
 ### Removed
