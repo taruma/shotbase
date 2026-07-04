@@ -2110,19 +2110,23 @@ async function confirmExport() {
     const exportName = document.getElementById('export-name').value.trim();
     const exportImages = document.getElementById('export-images').checked;
     const exportVideos = document.getElementById('export-videos').checked;
+    const exportAudio = document.getElementById('export-audio').checked;
     const includeDisplay = document.getElementById('include-display-in-filename').checked;
     const includeMetadata = document.getElementById('include-metadata').checked;
 
     // Determine export type based on checkbox states
     let exportType;
-    if (exportImages && exportVideos) {
+    const selectedCount = (exportImages ? 1 : 0) + (exportVideos ? 1 : 0) + (exportAudio ? 1 : 0);
+    if (selectedCount > 1) {
         exportType = 'all';
     } else if (exportImages) {
         exportType = 'images';
     } else if (exportVideos) {
         exportType = 'videos';
+    } else if (exportAudio) {
+        exportType = 'audio';
     } else {
-        showNotification('Please select at least one export option (Images or Videos)', 'error');
+        showNotification('Please select at least one export option (Images, Videos, or Audio)', 'error');
         return;
     }
 
