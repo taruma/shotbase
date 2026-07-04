@@ -1,15 +1,22 @@
 # Changelog
 
-## v4.1.0 (June 4, 2026) - by Taruma Sakti
+## v4.1.0 (July 4, 2026) - by Taruma Sakti
 
 ### Added
 - **Copy Shot Order button** in the export modal: copies a numbered, ordered list of all active shots (with display names if set) to the clipboard. Useful as a quick reference when working in external editors (e.g. Premiere Pro) where only SHXXX filenames are visible. Output format: `01. SH001 — Opening Scene`.
 - **Export modal two-row button layout**: utility actions (Open Exports Folder, Copy Shot Order) in the first row spaced evenly; primary actions (Export, Cancel) centered in the second row. Layout uses new `.export-utility-row` CSS class with `flex-direction: column` on `.export-actions`.
 - **Visual Reorder Image Preview**: Preview mode in the visual reorder modal now supports images (first frame and last frame) in addition to videos. Clicking a thumbnail opens the appropriate viewer — image modal for frames, video modal for videos/alt videos. Arrow-key navigation cycles through the visual reorder card DOM order for both image and video types.
+- **Audio Asset Support**: New `audio` asset type supporting `.mp3`, `.wav`, `.ogg`, `.flac`, `.aac`, and `.m4a` formats alongside existing images and videos. Includes a dedicated `latest_audio` directory with `serve_audio` playback route, versioned WIP storage in `shots/wip/SH###/audio/` (naming pattern `SH###_audio_v001.mp3`), promotion support via `ShotManager.set_current_version()` in `FileHandler.save_file()`, and an audio table in markdown export reports. The hidden audio DOM element is constrained to `max-height: 100px` with `overflow-y: auto` to prevent viewport overflow. Shot grid layout adjusted to accommodate the new audio column with playback controls.
+- **Audio Export Support**: Audio checkbox added to the export dialog in `confirmExport()`. Multi-media selection logic triggers `all` export type when multiple media categories are chosen (e.g., images + audio). Error messaging updated to reference audio alongside images and videos.
+- **Audio Search Indexing**: Audio prompts and captions are now indexed in `buildSearchIndex()` within the search modal, allowing users to find shots by their audio metadata. Matches existing search coverage for video and image prompt/caption fields.
 
 ### Fixed
 - **Thumbnail Click Broken for Display Names with Quotes**: Fixed a bug where clicking a video or image thumbnail silently failed when the shot's display name contained a single quote (e.g., "Ocean's Secret"). The unescaped quote broke the inline JavaScript `onclick` handler, producing a syntax error that prevented the preview modal from opening. Display names are now escaped before interpolation into `onclick` attributes in `createDropZone`.
 - **Unnecessary Page Rebuilds on Archive/Display Name Edit**: Removed full DOM re-renders from `archiveShot()` and `saveDisplayName()` that caused the entire shot grid to flash/repaint on every archive/unarchive or display name edit. These operations now update only the affected element directly — the archive button SVG icon flips instantly, and the display name text updates inline. Notification reminds users to press F5 to refresh layout after bulk archiving. All other operations (create, rename, upload, reorder, export) are unaffected.
+- **Project Info Data Loss Prevention**: Replaced duplicated default-project-info creation in `ProjectManager.update_project_timestamp()` with a call to `load_project_info()` when the info file is missing. If loading an existing but malformed `project_info.json` fails, a warning is logged and the update is skipped instead of overwriting with defaults, preventing potential data loss.
+
+### Changed
+- **Notification Position**: Notifications moved from `top: 20px` to `bottom: 20px` with a `translateY(20px)` slide-up animation on show/hide, preventing overlap with the sticky header navigation bar.
 
 ## v4.0.1 (June 3, 2026) - by Taruma Sakti
 
