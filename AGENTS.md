@@ -4,7 +4,7 @@
 
 | Item | Value |
 |---|---|
-| **Version** | 4.0.0 |
+| **Version** | 4.1.0 |
 | **Git Branch** | `main` |
 | **Python Requirement** | ≥3.13.1 |
 | **Default Host:Port** | 127.0.0.1:5001 |
@@ -26,6 +26,7 @@ Key features include:
 - Thumbnail generation for images and videos (lazy, on-demand)
 - First/last frame image variants per shot
 - Alternative video asset (alt_video) for reference, upscales, or additional video variants
+- Audio asset support (mp3, wav, ogg, flac, aac, m4a) with playback, promo, export, and search indexing
 - Shot search modal with multi-token search, content/archive filters, and keyboard navigation
 - Visual reorder modal with drag-and-drop grid, thumbnail switching, preview, and inline editing
 - Project info management (title, version, description, tags)
@@ -78,7 +79,8 @@ shotbuddy/
 ├── shots/                  # Project data directory (created per project)
 │   ├── wip/               # Work-in-progress shot folders
 │   ├── latest_images/     # Latest image versions
-│   └── latest_videos/     # Latest video versions (regular, alt)
+│   ├── latest_videos/     # Latest video versions (regular, alt)
+│   └── latest_audio/      # Latest audio versions
 ├── exports/               # Export output directory
 ├── run.py                 # Application entry point
 ├── shotbuddy.cfg          # Server configuration
@@ -143,7 +145,7 @@ Environment variables can override config file settings:
 ## Key Components
 - **ShotManager**: Core service for shot operations, file management, version tracking, thumbnail generation, and metadata handling
 - **ProjectManager**: Handles project state, recent projects (up to 6), and current project tracking
-- **FileHandler**: Manages file uploads and asset processing for all asset types including alt_video
+- **FileHandler**: Manages file uploads and asset processing for all asset types including alt_video and audio
 - **Routes**: REST API endpoints for project and shot operations
 
 ---
@@ -170,7 +172,7 @@ Environment variables can override config file settings:
 |---|---|---|---|
 | GET | `/api/shots/` | — | Get all shots with full info (ordered) |
 | POST | `/api/shots/` | — | Create new shot with gap-filling number |
-| POST | `/api/shots/upload` | Form: `file`, `shot_name`, `file_type` | Upload image/video; file_type: `image`/`first_image`/`last_image`/`video`/`alt_video` |
+| POST | `/api/shots/upload` | Form: `file`, `shot_name`, `file_type` | Upload image/video/audio; file_type: `image`/`first_image`/`last_image`/`video`/`alt_video`/`audio` |
 | POST | `/api/shots/notes` | `{shot_name, notes}` | Save shot notes (notes.txt) |
 | POST | `/api/shots/caption` | `{shot_name, asset_type, caption}` | Save caption (first_image/last_image/video/alt_video) |
 | POST | `/api/shots/prompt` | `{shot_name, asset_type, version, prompt}` | Save prompt for a specific asset version |
@@ -188,7 +190,10 @@ Environment variables can override config file settings:
 | POST | `/api/shots/export` | `{export_name, export_type, include_display_in_filename, include_metadata}` | Export latest assets + optional metadata.md with display name columns |
 | GET | `/api/shots/video/<shot_name>` | optional: `?type=video` (default) or `?type=alt_video` | Serve promoted video file |
 | GET | `/api/shots/image/<shot_name>/<asset_type>` | — | Serve promoted image (first_image/last_image) |
+| GET | `/api/shots/audio/<shot_name>` | — | Serve promoted audio file from latest_audio |
 | POST | `/api/shots/display-name` | `{shot_name, display_name}` | Set human-readable display name |
+
+> **Route alias**: `GET /api/shots/prompt_versions` is also available at `/api/shots/prompt-versions` (hyphen) — both map to the same handler.
 
 ### Request/Response Conventions
 - **Success**: `{"success": true, "data": ...}`
@@ -224,8 +229,8 @@ shot_routes.py ──→ get_shot_manager(path) ──→ ShotManager (cached pe
 ```
 
 ### Side Effects of Common Operations
-- **Creating a shot**: creates `shots/wip/SH###/` with `images/`, `videos/` subdirs; creates shot order entry; updates project timestamp
-- **Uploading an asset**: saves to `wip/SH###/images/` or `videos/` with version suffix; copies to `latest_images/` or `latest_videos/`; lazy thumbnail URL computed (generated on first request); updates version marker
+- **Creating a shot**: creates `shots/wip/SH###/` with `images/`, `videos/`, `audio/` subdirs; creates shot order entry; updates project timestamp
+- **Uploading an asset**: saves to `wip/SH###/images/`, `videos/`, or `audio/` with version suffix; copies to `latest_images/`, `latest_videos/`, or `latest_audio/`; lazy thumbnail URL computed (generated on first request for images/videos); updates version marker
 - **Promoting an asset**: copies WIP version → latest dir; updates `.version` marker; thumbnail regenerated on next request
 - **Archiving a shot**: toggles entry in `.archived_shots.json`
 
@@ -282,6 +287,10 @@ Every project directory contains these files (under `shots/`):
 ### `shots/wip/SH###/notes.txt`
 - Plain text file, read/written as-is
 
+### `shots/wip/SH###/audio/` (WIP audio files)
+- Naming: `SH###_audio_v001.mp3` (or `.wav`, `.ogg`, `.flac`, `.aac`, `.m4a`)
+- Prompt files: `SH###_audio_v001_audio_prompt.txt`
+
 ### `shots/wip/SH###/images/` (WIP image files)
 - Naming: `SH###_first_v001.png`, `SH###_last_v002.jpg`, or legacy `SH###_v001.png`
 - Prompt files: `SH###_first_v001_image_prompt.txt`, `SH###_last_v001_image_prompt.txt`
@@ -299,6 +308,11 @@ Every project directory contains these files (under `shots/`):
 ### `shots/latest_videos/`
 - Promoted finals: `SH###.mp4` (regular), `SH###_alt.mp4` (alt)
 - Version markers: `SH###.version`, `SH###_alt.version`
+- Each `.version` file contains a single integer
+
+### `shots/latest_audio/`
+- Promoted finals: `SH###.mp3` (or `.wav`, `.ogg`, `.flac`, `.aac`, `.m4a`)
+- Version markers: `SH###_audio.version`
 - Each `.version` file contains a single integer
 
 ### `.shotbuddy/thumbnails/` (per-project cache)
@@ -339,6 +353,14 @@ Every project directory contains these files (under `shots/`):
 - `image` is a legacy alias for `first_image` (backward compat)
 - Route handlers map `image` → `first_image` canonically
 
+### Audio Asset
+- `audio` = audio asset (maps to `_audio` suffix in filenames)
+- Purpose: voiceover, sound effects, music, or any audio track
+- Stored in `shots/wip/SH###/audio/` and promoted to `shots/latest_audio/`
+- Formats: `.mp3`, `.wav`, `.ogg`, `.flac`, `.aac`, `.m4a`
+- Supported across upload, version management, prompt saving, playback, captioning, export, and search indexing
+- Allowed extensions defined in `ALLOWED_AUDIO_EXTENSIONS` in `constants.py`
+
 ### Alternate Video Asset
 - `alt_video` = alternative video asset (maps to `_alt` suffix in filenames)
 - Purpose: reference video, upscaled footage, or any additional video variant
@@ -353,7 +375,7 @@ Every project directory contains these files (under `shots/`):
 - **Single SPA**: `app/templates/index.html` — one Jinja2 template, `{{ version }}` injected
 - **CSS**: `app/static/css/main.css` (primary styles, dark theme default), `app/static/css/styles.css` (light theme overrides), `app/static/css/search-modal.css` (search modal styles), `app/static/css/visual-reorder.css` (visual reorder grid styles)
 - **JavaScript**: 
-  - `app/static/js/main.js` — monolithic SPA core: shot grid, TOC, upload, export, modals, drag-and-drop, theme toggle
+  - `app/static/js/main.js` — monolithic SPA core: shot grid (with audio playback column), TOC, upload, export, modals, drag-and-drop, theme toggle
   - `app/static/js/search-modal.js` — client-side search with in-memory index, multi-token matching, filter pills, keyboard nav
   - `app/static/js/visual-reorder.js` — drag-and-drop shot sorting grid, thumbnail switching, preview/edit modes
   - `app/static/js/modal-behavior.js` — centralized click-outside and Escape-key handling for all modals
@@ -366,12 +388,14 @@ Key patterns:
 - TOC (Table of Contents): side panel rendered dynamically, supports filter/search, persists open/close state, collapsible archived section
 - File upload: uses `FormData` with `file`, `shot_name`, `file_type` fields; shows loading states
 - Cache busting: appends `?t=timestamp` to media URLs
-- Modals: image/video viewers with keyboard arrow navigation; export modal with media type checkboxes; search modal with Ctrl+Shift+F shortcut; visual reorder modal with SortableJS
+- Modals: image/video viewers with keyboard arrow navigation; export modal with media type checkboxes and two-row button layout (utility row + centered actions); search modal with Ctrl+Shift+F shortcut; visual reorder modal with SortableJS
+- Clipboard: `copyShotOrder()` copies a zero-padded numbered list of active shots (`01. SH001 — Display Name`) to clipboard for reference in external editors
+- Audio: hidden audio DOM element for playback, constrained to `max-height: 100px` with `overflow-y: auto`; audio checkbox in export dialog; audio prompts and captions indexed in search modal
 - Drag-and-drop: custom implementation for shot reordering with grip handle; SortableJS for visual reorder grid
 - Dynamic page title: browser tab updates with project info and app version on screen transitions
 
 ### CSS Organization
-- `main.css`: base layout, dark theme, shot grid, TOC panel, modals, tooltips, buttons, sticky header, drag-drop
+- `main.css`: base layout, dark theme, shot grid, TOC panel, modals, tooltips, buttons, sticky header, drag-drop; `.export-utility-row` for export modal utility button spacing
 - `styles.css`: light theme overrides only (loaded after main.css)
 - `search-modal.css`: search modal layout, filter pills, snippet styling, keyboard focus
 - `visual-reorder.css`: responsive 5-column grid, cards, thumbnail selectors, preview/edit mode styles

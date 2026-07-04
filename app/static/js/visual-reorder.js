@@ -2,7 +2,7 @@
    Visual Reorder Modal — Self-contained module
    Depends on globals: shots, renderShots, showNotification,
    captureScroll, restoreScroll, escapeHtml, displayAssetLabel, Sortable,
-   playVideo, closeVideoModal, handleVideoModalKeydown (from main.js)
+   playVideo, closeVideoModal, showImage, closeImageModal (from main.js)
    ============================================================ */
 
 let visualReorderSortable = null;
@@ -13,6 +13,8 @@ let visualCurrentShotName = null;
 let visualCurrentAssetType = 'video';
 let _savedNavigateNext = null;
 let _savedNavigatePrev = null;
+let _savedNavigateNextImage = null;
+let _savedNavigatePrevImage = null;
 
 // ============================================================
 // Preview toggle — injects button into thumbnail selector row
@@ -81,7 +83,7 @@ function togglePreviewMode() {
         }
         if (grid) grid.classList.add('preview-mode');
 
-        // Save and override navigation functions
+        // Save and override navigation functions (video)
         if (window.navigateToNextShot) {
             _savedNavigateNext = window.navigateToNextShot;
             window.navigateToNextShot = visualNavigateNext;
@@ -89,6 +91,15 @@ function togglePreviewMode() {
         if (window.navigateToPreviousShot) {
             _savedNavigatePrev = window.navigateToPreviousShot;
             window.navigateToPreviousShot = visualNavigatePrev;
+        }
+        // Save and override navigation functions (image)
+        if (window.navigateToNextImage) {
+            _savedNavigateNextImage = window.navigateToNextImage;
+            window.navigateToNextImage = visualNavigateNextImage;
+        }
+        if (window.navigateToPreviousImage) {
+            _savedNavigatePrevImage = window.navigateToPreviousImage;
+            window.navigateToPreviousImage = visualNavigatePrevImage;
         }
     } else {
         if (btn) {
@@ -129,6 +140,14 @@ function restoreNavigationOverrides() {
     if (_savedNavigatePrev) {
         window.navigateToPreviousShot = _savedNavigatePrev;
         _savedNavigatePrev = null;
+    }
+    if (_savedNavigateNextImage) {
+        window.navigateToNextImage = _savedNavigateNextImage;
+        _savedNavigateNextImage = null;
+    }
+    if (_savedNavigatePrevImage) {
+        window.navigateToPreviousImage = _savedNavigatePrevImage;
+        _savedNavigatePrevImage = null;
     }
 }
 
@@ -424,34 +443,50 @@ function getVisibleVisualCards() {
     return visible;
 }
 
-// Determine which asset type to play based on current thumbnail type.
-// 'video' and 'alt_video' map to themselves; image types default to 'video'.
-function _getPlayType() {
-    if (visualThumbType === 'alt_video') return 'alt_video';
-    return 'video';
+// Determine which asset type to preview based on current thumbnail type.
+// Image types (first_image, last_image) are returned as-is; video types (video, alt_video) as-is.
+function _getPreviewAssetType() {
+    return visualThumbType;
 }
 
 function visualPlayCardVideo(shot) {
-    var playType = _getPlayType();
+    var previewType = _getPreviewAssetType();
     visualCurrentShotName = shot.name;
-    visualCurrentAssetType = playType;
+    visualCurrentAssetType = previewType;
 
-    var asset = shot[playType];
+    var asset = shot[previewType];
     if (!asset || !asset.file) {
-        var label = playType === 'alt_video' ? 'alt ' : '';
-        showNotification('No ' + label + 'video available for ' + shot.name, 'error');
+        var label = displayAssetLabel(previewType);
+        showNotification('No ' + label.toLowerCase() + ' available for ' + shot.name, 'error');
         return;
     }
 
-    if (typeof window.playVideo === 'function') {
-        window.playVideo(shot.name, shot.display_name || '', playType);
+    if (previewType === 'first_image' || previewType === 'last_image') {
+        if (typeof window.showImage === 'function') {
+            window.showImage(shot.name, shot.display_name || '', previewType);
+        }
+    } else {
+        if (typeof window.playVideo === 'function') {
+            window.playVideo(shot.name, shot.display_name || '', previewType);
+        }
     }
+}
+
+function _findShotByCardName(name) {
+    for (var k = 0; k < shots.length; k++) {
+        if (shots[k].name === name) return shots[k];
+    }
+    return null;
+}
+
+function _isImageType(type) {
+    return type === 'first_image' || type === 'last_image';
 }
 
 function visualNavigateNext() {
     var cards = getVisibleVisualCards();
     if (cards.length === 0) return;
-    var playType = _getPlayType();
+    var previewType = visualCurrentAssetType;
 
     var idx = -1;
     for (var i = 0; i < cards.length; i++) {
@@ -465,13 +500,14 @@ function visualNavigateNext() {
     for (var j = 1; j <= cards.length; j++) {
         var nextIdx = (idx + j) % cards.length;
         var nextName = cards[nextIdx].dataset.shotName;
-        var nextShot = null;
-        for (var k = 0; k < shots.length; k++) {
-            if (shots[k].name === nextName) { nextShot = shots[k]; break; }
-        }
-        if (nextShot && nextShot[playType] && nextShot[playType].file) {
+        var nextShot = _findShotByCardName(nextName);
+        if (nextShot && nextShot[previewType] && nextShot[previewType].file) {
             visualCurrentShotName = nextName;
-            window.playVideo(nextName, nextShot.display_name || '', playType);
+            if (_isImageType(previewType)) {
+                window.showImage(nextName, nextShot.display_name || '', previewType);
+            } else {
+                window.playVideo(nextName, nextShot.display_name || '', previewType);
+            }
             return;
         }
     }
@@ -480,7 +516,7 @@ function visualNavigateNext() {
 function visualNavigatePrev() {
     var cards = getVisibleVisualCards();
     if (cards.length === 0) return;
-    var playType = _getPlayType();
+    var previewType = visualCurrentAssetType;
 
     var idx = -1;
     for (var i = 0; i < cards.length; i++) {
@@ -494,16 +530,28 @@ function visualNavigatePrev() {
     for (var j = 1; j <= cards.length; j++) {
         var prevIdx = (idx - j + cards.length) % cards.length;
         var prevName = cards[prevIdx].dataset.shotName;
-        var prevShot = null;
-        for (var k = 0; k < shots.length; k++) {
-            if (shots[k].name === prevName) { prevShot = shots[k]; break; }
-        }
-        if (prevShot && prevShot[playType] && prevShot[playType].file) {
+        var prevShot = _findShotByCardName(prevName);
+        if (prevShot && prevShot[previewType] && prevShot[previewType].file) {
             visualCurrentShotName = prevName;
-            window.playVideo(prevName, prevShot.display_name || '', playType);
+            if (_isImageType(previewType)) {
+                window.showImage(prevName, prevShot.display_name || '', previewType);
+            } else {
+                window.playVideo(prevName, prevShot.display_name || '', previewType);
+            }
             return;
         }
     }
+}
+
+// Image-specific navigation functions for visual reorder mode
+function visualNavigateNextImage() {
+    visualCurrentAssetType = visualThumbType;
+    visualNavigateNext();
+}
+
+function visualNavigatePrevImage() {
+    visualCurrentAssetType = visualThumbType;
+    visualNavigatePrev();
 }
 
 // ============================================================

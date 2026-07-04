@@ -41,6 +41,13 @@ This version of ShotBase is packed with features designed to make your workflow 
 - **UI Polish** — Sticky header stays visible on scroll, browser tab shows dynamic project title, and the table of contents has a collapsible archived section.
 - **Performance** — Thumbnails generated lazily on first request, and version scans cached per shot for faster page loads.
 
+### 🎵 v4.1 — Audio Asset Support
+- **Audio Assets** — Upload, manage, and play back `.mp3`, `.wav`, `.ogg`, `.flac`, `.aac`, or `.m4a` files alongside your images and videos. Full versioning, promotion, export, and search indexing for voiceovers, sound effects, music, and more.
+- **Copy Shot Order** — New button in the export modal copies a numbered, ordered list of all active shots (with display names) to clipboard. Format: `01. SH001 — Opening Scene`.
+- **Visual Reorder Image Preview** — Preview mode in the visual reorder grid now supports images (first and last frames) in addition to videos and alt videos.
+- **Export Modal Layout** — Two-row button layout with utility actions (Open Exports Folder, Copy Shot Order) in the first row and primary actions centered below.
+- **Performance & Stability** — Targeted DOM updates eliminate full-page flashes when archiving or editing display names; project info data loss prevention for malformed `project_info.json`; notifications moved to the bottom of the viewport.
+
 ### 🚀 Streamlined Project Management
 
 - **Comprehensive Project Dashboard**: Get a bird's-eye view of your entire project with the responsive **Table of Shots (TOC)** panel. Filter, navigate, and see active vs. archived shots at a glance.
@@ -61,11 +68,11 @@ This version of ShotBase is packed with features designed to make your workflow 
 
 ### 💡 Enhanced User Experience
 
-- **Advanced Export Options**: Precisely select what you want to export. Choose between images, videos, or both, and even include metadata summaries for a complete project handoff.
+- **Advanced Export Options**: Precisely select what you want to export. Choose between images, videos, audio, or any combination, and even include metadata summaries for a complete project handoff.
   <img src="https://github.com/user-attachments/assets/d1c0f1bb-d897-464b-bd07-0ca8559d9900" alt="Advanced Export Modal" width="500"/>
 - **Seamless Light/Dark Theme**: Switch between light and dark modes with a single click. Your preference is saved automatically for your next session.
   ![Light/Dark Theme Toggle](https://github.com/user-attachments/assets/ec2f3e5e-33a3-4200-89cc-eae3cf70f1c6)
-- **And much more**: Enjoy features like dynamic note fields that expand as you type, integrated asset captions, quick access to recent projects, shot search with Ctrl+Shift+F, visual drag-and-drop reorder grid, alternative video asset support, and sticky header.
+- **And much more**: Enjoy features like dynamic note fields that expand as you type, integrated asset captions, quick access to recent projects, shot search with Ctrl+Shift+F, visual drag-and-drop reorder grid, alternative video asset support, audio asset support, copy shot order utility, and sticky header.
 
 ## 🔧 Installation
 
@@ -113,10 +120,12 @@ project_folder/
 ├── shots/
 │   ├── latest_images/    # The current, "promoted" image for each shot (e.g., SH010.png)
 │   ├── latest_videos/    # The current, "promoted" video for each shot (e.g., SH010.mp4)
+│   ├── latest_audio/     # The current, "promoted" audio for each shot (e.g., SH010.mp3)
 │   └── wip/              # Work-in-progress and old versions are archived here
 │       └── SH010/
 │           ├── images/   # e.g., SH010_v001.png, SH010_v002.png
-│           └── videos/   # e.g., SH010_v001.mp4
+│           ├── videos/   # e.g., SH010_v001.mp4
+│           └── audio/    # e.g., SH010_audio_v001.mp3
 └── project_info.json     # Metadata like title, version, and notes
 ```
 

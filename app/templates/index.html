@@ -142,6 +142,7 @@
                     <div class="grid-header-cell">Last Frame</div>
                     <div class="grid-header-cell">Video</div>
                     <div class="grid-header-cell">Alt Video</div>
+                    <div class="grid-header-cell">Audio</div>
                     <div class="grid-header-cell">Notes</div>
                 </div>
                 <div id="shot-list"></div>
@@ -328,6 +329,11 @@
                             <span class="checkbox-custom"></span>
                             <span class="checkbox-text">Videos</span>
                         </label>
+                        <label class="checkbox-label checkbox-inline">
+                            <input id="export-audio" type="checkbox" checked class="export-checkbox" />
+                            <span class="checkbox-custom"></span>
+                            <span class="checkbox-text">Audio</span>
+                        </label>
                     </div>
                 </div>
 
@@ -347,10 +353,13 @@
             </div>
 
             <div class="export-actions">
-                <button class="dark-button export-folder-btn" onclick="openExportsFolder()">
-                    <img src="{{ url_for('static', filename='icons/folder_24.png') }}" alt="" style="width: 16px; height: 16px; margin-right: 8px; vertical-align: middle;" />
-                    Open Exports Folder
-                </button>
+                <div class="export-utility-row">
+                    <button class="dark-button export-folder-btn" onclick="openExportsFolder()">
+                        <img src="{{ url_for('static', filename='icons/folder_24.png') }}" alt="" style="width: 16px; height: 16px; margin-right: 8px; vertical-align: middle;" />
+                        Open Exports Folder
+                    </button>
+                    <button id="copy-order-btn" class="dark-button export-folder-btn" onclick="copyShotOrder()" title="Copy shot order list to clipboard">📋 Copy Shot Order</button>
+                </div>
                 <div class="modal-buttons">
                     <button id="export-btn" class="green-button" onclick="confirmExport()">Export</button>
                     <button id="export-cancel-btn" class="dark-button" onclick="closeExportModal()">Cancel</button>
@@ -384,6 +393,35 @@
             </svg>
         </button>
         <button class="nav-arrow nav-arrow-right" onclick="navigateToNextShot()" aria-label="Next shot">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Audio Playback Modal -->
+    <div id="audio-modal" class="modal">
+        <div class="modal-content audio-modal-content">
+            <button class="close-modal" onclick="closeAudioModal()">&times;</button>
+            <div class="audio-header">
+                <h3 id="audio-modal-title"></h3>
+                <div class="audio-version">v<span id="audio-version"></span></div>
+            </div>
+            <div class="audio-container">
+                <audio id="audio-player" controls>
+                    Your browser does not support the audio tag.
+                </audio>
+            </div>
+            <div class="audio-info">
+                <div id="audio-prompt" class="audio-prompt"></div>
+            </div>
+        </div>
+        <button class="nav-arrow nav-arrow-left" onclick="navigateToPreviousAudio()" aria-label="Previous shot">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </button>
+        <button class="nav-arrow nav-arrow-right" onclick="navigateToNextAudio()" aria-label="Next shot">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="9 18 15 12 9 6"></polyline>
             </svg>

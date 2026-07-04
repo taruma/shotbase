@@ -5,6 +5,7 @@ from pathlib import Path
 from PIL import Image
 
 from app.config.constants import (
+    ALLOWED_AUDIO_EXTENSIONS,
     ALLOWED_IMAGE_EXTENSIONS,
     ALLOWED_VIDEO_EXTENSIONS,
     THUMBNAIL_SIZE,
@@ -22,10 +23,12 @@ class FileHandler:
         self.wip_dir = self.shots_dir / 'wip'
         self.latest_images_dir = self.shots_dir / 'latest_images'
         self.latest_videos_dir = self.shots_dir / 'latest_videos'
+        self.latest_audio_dir = self.shots_dir / 'latest_audio'
 
         self.wip_dir.mkdir(parents=True, exist_ok=True)
         self.latest_images_dir.mkdir(parents=True, exist_ok=True)
         self.latest_videos_dir.mkdir(parents=True, exist_ok=True)
+        self.latest_audio_dir.mkdir(parents=True, exist_ok=True)
         self.thumbnail_cache_dir = get_project_thumbnail_cache_dir(self.project_path)
 
     def clear_thumbnail_cache(self):
@@ -49,13 +52,16 @@ class FileHandler:
         # Normalize/validate file type and extension
         is_image_type = file_type in {'image', 'first_image', 'last_image'}
         is_video_type = file_type in {'video', 'alt_video'}
+        is_audio_type = file_type == 'audio'
 
         if is_image_type and file_ext not in ALLOWED_IMAGE_EXTENSIONS:
             raise ValueError(f"Invalid image format. Allowed: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}")
         if is_video_type and file_ext not in ALLOWED_VIDEO_EXTENSIONS:
             raise ValueError(f"Invalid video format. Allowed: {', '.join(ALLOWED_VIDEO_EXTENSIONS)}")
+        if is_audio_type and file_ext not in ALLOWED_AUDIO_EXTENSIONS:
+            raise ValueError(f"Invalid audio format. Allowed: {', '.join(ALLOWED_AUDIO_EXTENSIONS)}")
 
-        if not (is_image_type or is_video_type):
+        if not (is_image_type or is_video_type or is_audio_type):
             raise ValueError("Invalid file_type")
 
         if not shot_dir.exists():
@@ -120,6 +126,32 @@ class FileHandler:
             # Thumbnails for videos
             thumbnail_path = self.create_video_thumbnail(str(final_path), base)
 
+        elif is_audio_type:
+            wip_dir = shot_dir / 'audio'
+            wip_dir.mkdir(exist_ok=True)
+            base = f'{shot_name}_audio'
+            version = self.get_next_version(wip_dir, base, file_ext)
+
+            wip_filename = f'{base}_v{version:03d}{file_ext}'
+            wip_path = wip_dir / wip_filename
+            file.save(str(wip_path))
+
+            final_dir = self.latest_audio_dir
+            final_path = final_dir / f'{base}{file_ext}'
+
+            for existing_file in final_dir.glob(f'{base}.*'):
+                if existing_file != wip_path:
+                    existing_file.unlink()
+
+            shutil.copy2(str(wip_path), str(final_path))
+            # Update current version marker so UI shows the promoted version correctly
+            try:
+                manager.set_current_version(shot_name, file_type, version)
+            except Exception as e:
+                logger.warning("Failed to set current version marker: %s", e)
+
+            thumbnail_path = None  # No thumbnail for audio
+
         return {
             'wip_path': str(wip_path).replace('\\', '/'),
             'final_path': str(final_path).replace('\\', '/'),
@@ -131,8 +163,13 @@ class FileHandler:
         if not wip_dir.exists():
             return 1
 
-        file_type = 'image' if 'image' in str(wip_dir) else 'video'
-        allowed_extensions = ALLOWED_IMAGE_EXTENSIONS if file_type == 'image' else ALLOWED_VIDEO_EXTENSIONS
+        wip_dir_str = str(wip_dir)
+        if 'audio' in wip_dir_str:
+            allowed_extensions = ALLOWED_AUDIO_EXTENSIONS
+        elif 'image' in wip_dir_str:
+            allowed_extensions = ALLOWED_IMAGE_EXTENSIONS
+        else:
+            allowed_extensions = ALLOWED_VIDEO_EXTENSIONS
 
         existing_files = []
         for ext in allowed_extensions:

@@ -876,6 +876,7 @@ function createShotRow(shot) {
                 ${createDropZone(shot, 'last_image')}
                 ${createDropZone(shot, 'video')}
                 ${createDropZone(shot, 'alt_video')}
+                ${createDropZone(shot, 'audio')}
                 <div class="notes-cell">
                     <textarea class="notes-input" 
                               placeholder="Add notes..." 
@@ -896,6 +897,7 @@ function displayAssetLabel(type) {
         case 'last_image': return 'Last Frame';
         case 'video': return 'Video';
         case 'alt_video': return 'Alt Video';
+        case 'audio': return 'Audio';
         default:
             return type.charAt(0).toUpperCase() + type.slice(1);
     }
@@ -903,23 +905,27 @@ function displayAssetLabel(type) {
 
 function createDropZone(shot, type) {
     const file = shot[type];
+    const escDn = (shot.display_name || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
     const currentVersion = (file && (file.current_version || file.max_version)) || 0;
     const maxVersion = (file && file.max_version) || 0;
     const hasFile = maxVersion > 0 || currentVersion > 0;
 
     if (hasFile) {
         const isVideo = type === 'video' || type === 'alt_video';
+        const isAudio = type === 'audio';
         const thumbnailUrl = file.thumbnail ? `${file.thumbnail}?v=${Date.now()}` : null;
 
         let mediaHtml;
-        if (isVideo) {
+        if (isAudio) {
+            mediaHtml = `<div class="preview-thumbnail audio-thumbnail" onclick="playAudio('${shot.name}', '${escDn}')">&#9835;</div>`;
+        } else if (isVideo) {
             const videoStyle = thumbnailUrl ?
                 `background-image: url('${thumbnailUrl}'); background-size: cover; background-position: center;` :
                 'background: #404040;';
-            mediaHtml = `<div class="preview-thumbnail video-thumbnail" style="${videoStyle}" onclick="playVideo('${shot.name}', '${shot.display_name || ''}', '${type}')"></div>`;
+            mediaHtml = `<div class="preview-thumbnail video-thumbnail" style="${videoStyle}" onclick="playVideo('${shot.name}', '${escDn}', '${type}')"></div>`;
         } else {
             mediaHtml = thumbnailUrl ?
-                `<img class="preview-thumbnail" src="${thumbnailUrl}" alt="${displayAssetLabel(type)} thumbnail" onclick="showImage('${shot.name}', '${shot.display_name || ''}', '${type}')">` :
+                `<img class="preview-thumbnail" src="${thumbnailUrl}" alt="${displayAssetLabel(type)} thumbnail" onclick="showImage('${shot.name}', '${escDn}', '${type}')">` :
                 `<div class="preview-thumbnail placeholder"></div>`;
         }
 
@@ -1048,6 +1054,7 @@ async function uploadFile(file, shotName, fileType) {
     else if (fileType === 'last_image') dropZoneIndex = 3;
     else if (fileType === 'video') dropZoneIndex = 4;
     else if (fileType === 'alt_video') dropZoneIndex = 5;
+    else if (fileType === 'audio') dropZoneIndex = 6;
     else return; // Invalid type
     const dropZone = row.children[dropZoneIndex];
     if (!dropZone || !dropZone.classList.contains('drop-zone')) {
@@ -1175,16 +1182,18 @@ function updateDropZoneForShot(shotName, assetType, shotData) {
     if (!shotRow) return;
 
     // Get the drop zone based on asset type - they appear in specific order after action-cell:
-    // [0] action-cell, [1] shot-name, [2] first_image, [3] last_image, [4] video, [5] alt_video, [6] notes
+    // [0] action-cell, [1] shot-name, [2] first_image, [3] last_image, [4] video, [5] alt_video, [6] audio, [7] notes
     let dropZone = null;
     if (assetType === 'first_image') {
-        dropZone = shotRow.children[2]; // first child after action and name
+        dropZone = shotRow.children[2];
     } else if (assetType === 'last_image') {
         dropZone = shotRow.children[3];
     } else if (assetType === 'video') {
         dropZone = shotRow.children[4];
     } else if (assetType === 'alt_video') {
         dropZone = shotRow.children[5];
+    } else if (assetType === 'audio') {
+        dropZone = shotRow.children[6];
     }
 
     if (!dropZone || !dropZone.classList.contains('drop-zone')) return;
@@ -1235,6 +1244,7 @@ function replaceDropZoneForShot(shotName, assetType, shotData) {
     else if (assetType === 'last_image') dropZoneIndex = 3;
     else if (assetType === 'video') dropZoneIndex = 4;
     else if (assetType === 'alt_video') dropZoneIndex = 5;
+    else if (assetType === 'audio') dropZoneIndex = 6;
     else return;
 
     const oldDropZone = shotRow.children[dropZoneIndex];
@@ -1351,9 +1361,11 @@ function getFileType(filename) {
     const ext = filename.toLowerCase().split('.').pop();
     const imageExts = ['jpg', 'jpeg', 'png', 'webp'];
     const videoExts = ['mp4', 'mov'];
+    const audioExts = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
 
     if (imageExts.includes(ext)) return 'first_image'; // default image target
     if (videoExts.includes(ext)) return 'video';
+    if (audioExts.includes(ext)) return 'audio';
     return null;
 }
 
@@ -1364,6 +1376,8 @@ function openFileDialog(shotName, fileType) {
         input.accept = 'image/*';
     } else if (fileType === 'video' || fileType === 'alt_video') {
         input.accept = 'video/*';
+    } else if (fileType === 'audio') {
+        input.accept = 'audio/*';
     }
     input.style.display = 'none';
     input.addEventListener('change', () => {
@@ -1465,9 +1479,18 @@ async function saveDisplayName(shotName, displayName) {
             if (idx !== -1) {
                 shots[idx] = result.data;
             }
-            captureScroll(`shot-row-${shotName}`);
-            renderShots();
-            restoreScroll();
+            // Update display name text directly on the row
+            const row = document.getElementById(`shot-row-${shotName}`);
+            if (row) {
+                const labelEl = row.querySelector('.shot-name');
+                if (labelEl) {
+                    labelEl.dataset.displayName = displayName;
+                    const shot = shots[idx];
+                    labelEl.innerHTML = displayName
+                        ? `${escapeHtml(displayName)}<div class="shot-code">(${shotName})</div>`
+                        : shotName;
+                }
+            }
         } else {
             showNotification(result.error || 'Failed to update display name', 'error');
         }
@@ -1503,14 +1526,29 @@ async function archiveShot(shotName, archived) {
         });
         const result = await response.json();
         if (result.success) {
-            showNotification(archived ? `Archived ${shotName}` : `Unarchived ${shotName}`);
             const idx = shots.findIndex(s => s.name === shotName);
             if (idx !== -1) {
                 shots[idx] = result.data;
             }
-            captureScroll(`shot-row-${shotName}`);
-            renderShots();
-            restoreScroll();
+            // Flip the archive/unarchive button icon on the row
+            const row = document.getElementById(`shot-row-${shotName}`);
+            if (row) {
+                const btn = row.querySelector('.action-cell .icon-btn');
+                if (btn) {
+                    if (archived) {
+                        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="7 14 12 9 17 14"></polyline><line x1="12" y1="9" x2="12" y2="21"></line><rect x="3" y="3" width="18" height="6" rx="2"></rect></svg>';
+                        btn.title = 'Unarchive';
+                        btn.setAttribute('aria-label', 'Unarchive');
+                        row.classList.add('archived');
+                    } else {
+                        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line><rect x="3" y="15" width="18" height="6" rx="2"></rect></svg>';
+                        btn.title = 'Archive';
+                        btn.setAttribute('aria-label', 'Archive');
+                        row.classList.remove('archived');
+                    }
+                }
+            }
+            showNotification(archived ? `Archived ${shotName}. Refresh page (F5) to sort.` : `Unarchived ${shotName}. Refresh page (F5) to sort.`);
         } else {
             showNotification(result.error || 'Failed to update archive state', 'error');
         }
@@ -1674,7 +1712,7 @@ async function savePrompt() {
         } else {
             const shot = shots.find(s => s.name === shotName);
             if (shot) {
-                if (assetType === 'first_image' || assetType === 'last_image' || assetType === 'image' || assetType === 'video' || assetType === 'alt_video') {
+                if (assetType === 'first_image' || assetType === 'last_image' || assetType === 'image' || assetType === 'video' || assetType === 'alt_video' || assetType === 'audio') {
                     const key = assetType === 'image' ? 'first_image' : assetType; // legacy map
                     if (shot[key]) {
                         shot[key].prompt = promptText;
@@ -2072,19 +2110,23 @@ async function confirmExport() {
     const exportName = document.getElementById('export-name').value.trim();
     const exportImages = document.getElementById('export-images').checked;
     const exportVideos = document.getElementById('export-videos').checked;
+    const exportAudio = document.getElementById('export-audio').checked;
     const includeDisplay = document.getElementById('include-display-in-filename').checked;
     const includeMetadata = document.getElementById('include-metadata').checked;
 
     // Determine export type based on checkbox states
     let exportType;
-    if (exportImages && exportVideos) {
+    const selectedCount = (exportImages ? 1 : 0) + (exportVideos ? 1 : 0) + (exportAudio ? 1 : 0);
+    if (selectedCount > 1) {
         exportType = 'all';
     } else if (exportImages) {
         exportType = 'images';
     } else if (exportVideos) {
         exportType = 'videos';
+    } else if (exportAudio) {
+        exportType = 'audio';
     } else {
-        showNotification('Please select at least one export option (Images or Videos)', 'error');
+        showNotification('Please select at least one export option (Images, Videos, or Audio)', 'error');
         return;
     }
 
@@ -2127,6 +2169,43 @@ async function confirmExport() {
         if (cancelBtn) cancelBtn.disabled = false;
         if (loadingEl) loadingEl.style.display = 'none';
     }
+}
+
+function copyShotOrder() {
+    const activeShots = shots.filter(s => !s.archived);
+    if (activeShots.length === 0) {
+        showNotification('No active shots to copy', 'error');
+        return;
+    }
+
+    const lines = activeShots.map((shot, i) => {
+        const num = String(i + 1).padStart(String(activeShots.length).length, '0');
+        if (shot.display_name) {
+            return `${num}. ${shot.name} — ${shot.display_name}`;
+        }
+        return `${num}. ${shot.name}`;
+    });
+
+    const text = lines.join('\n');
+
+    navigator.clipboard.writeText(text).then(() => {
+        showNotification(`Copied ${activeShots.length} shots to clipboard!`);
+    }).catch(() => {
+        // Fallback for browsers that don't support clipboard API
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            showNotification(`Copied ${activeShots.length} shots to clipboard!`);
+        } catch (e) {
+            showNotification('Failed to copy to clipboard', 'error');
+        }
+        document.body.removeChild(textarea);
+    });
 }
 
 // Video Playback Functions
@@ -2351,11 +2430,109 @@ function closeImageModal() {
 }
 
 
+// Audio Playback Functions
+let currentAudioShotIndex = -1;
+
+function playAudio(shotName, displayName) {
+    const shot = shots.find(s => s.name === shotName);
+    const asset = shot && shot.audio;
+    if (!asset || !asset.file) {
+        showNotification('No audio available for this shot', 'error');
+        return;
+    }
+
+    const activeShots = shots.filter(s => !s.archived && s.audio && s.audio.file);
+    currentAudioShotIndex = activeShots.findIndex(s => s.name === shotName);
+
+    const audioUrl = `/api/shots/audio/${shotName}?v=${Date.now()}`;
+    const audioPlayer = document.getElementById('audio-player');
+    const audioModalTitle = document.getElementById('audio-modal-title');
+    const audioVersion = document.getElementById('audio-version');
+    const audioPrompt = document.getElementById('audio-prompt');
+
+    audioPlayer.src = audioUrl;
+
+    if (displayName) {
+        audioModalTitle.innerHTML = `${escapeHtml(displayName)} Audio<br><span style="font-size: 14px; opacity: 0.7; font-weight: normal;">(${shotName})</span>`;
+    } else {
+        audioModalTitle.textContent = `${shotName} Audio`;
+    }
+
+    audioVersion.textContent = String(asset.current_version).padStart(3, '0');
+
+    if (asset.prompt) {
+        audioPrompt.textContent = asset.prompt;
+        audioPrompt.style.display = 'block';
+    } else {
+        audioPrompt.textContent = '';
+        audioPrompt.style.display = 'none';
+    }
+
+    document.getElementById('audio-modal').style.display = 'flex';
+    document.addEventListener('keydown', handleAudioModalKeydown);
+
+    audioPlayer.load();
+    audioPlayer.play().catch(e => {
+        console.log('Audio autoplay prevented:', e);
+    });
+}
+
+function navigateToNextAudio() {
+    const activeShots = shots.filter(s => !s.archived && s.audio && s.audio.file);
+    if (activeShots.length === 0 || currentAudioShotIndex === -1) return;
+    const nextIndex = (currentAudioShotIndex + 1) % activeShots.length;
+    const nextShot = activeShots[nextIndex];
+    if (nextShot) {
+        playAudio(nextShot.name, nextShot.display_name || '');
+    }
+}
+
+function navigateToPreviousAudio() {
+    const activeShots = shots.filter(s => !s.archived && s.audio && s.audio.file);
+    if (activeShots.length === 0 || currentAudioShotIndex === -1) return;
+    const prevIndex = (currentAudioShotIndex - 1 + activeShots.length) % activeShots.length;
+    const prevShot = activeShots[prevIndex];
+    if (prevShot) {
+        playAudio(prevShot.name, prevShot.display_name || '');
+    }
+}
+
+function handleAudioModalKeydown(event) {
+    const audioModal = document.getElementById('audio-modal');
+    if (audioModal.style.display !== 'flex') return;
+    switch (event.key) {
+        case 'ArrowLeft':
+            event.preventDefault();
+            navigateToPreviousAudio();
+            break;
+        case 'ArrowRight':
+            event.preventDefault();
+            navigateToNextAudio();
+            break;
+    }
+}
+
+function closeAudioModal() {
+    const audioModal = document.getElementById('audio-modal');
+    const audioPlayer = document.getElementById('audio-player');
+    audioModal.style.display = 'none';
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+    audioPlayer.src = '';
+    document.removeEventListener('keydown', handleAudioModalKeydown);
+}
+
 // Expose image functions globally
 window.showImage = showImage;
 window.closeImageModal = closeImageModal;
 window.navigateToNextImage = navigateToNextImage;
 window.navigateToPreviousImage = navigateToPreviousImage;
+
+// Expose audio functions globally
+window.playAudio = playAudio;
+window.closeAudioModal = closeAudioModal;
+window.navigateToNextAudio = navigateToNextAudio;
+window.navigateToPreviousAudio = navigateToPreviousAudio;
 
 // Expose functions globally
 window.openProjectInfoModal = openProjectInfoModal;
