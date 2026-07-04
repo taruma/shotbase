@@ -472,7 +472,7 @@ body {
 /* Notifications */
 .notification {
     position: fixed;
-    top: 20px;
+    bottom: 20px;
     right: 20px;
     background: #00c851;
     color: #1a1a1a;
@@ -480,14 +480,14 @@ body {
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     /* Move the notification completely off screen */
-    transform: translateX(calc(100% + 40px));
+    transform: translateX(calc(100% + 40px)) translateY(20px);
     transition: transform 0.3s ease;
     z-index: 1000;
     font-weight: 500;
 }
 
 .notification.show {
-    transform: translateX(0);
+    transform: translateX(0) translateY(0);
 }
 
 .notification.error {
