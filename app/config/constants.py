@@ -8,6 +8,7 @@ PROJECTS_FILE = 'projects.json'
 MAX_RECENT_PROJECTS = 6
 ALLOWED_IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.webp'}
 ALLOWED_VIDEO_EXTENSIONS = {'.mp4', '.mov'}
+ALLOWED_AUDIO_EXTENSIONS = {'.mp3', '.wav', '.ogg', '.flac', '.aac', '.m4a'}
 
 # Central thumbnail cache location. Stored inside the application's static
 # directory so thumbnails persist across projects. The cache is cleared when

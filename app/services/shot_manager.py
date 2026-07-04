@@ -6,6 +6,7 @@ from pathlib import Path
 from PIL import Image
 
 from app.config.constants import (
+    ALLOWED_AUDIO_EXTENSIONS,
     ALLOWED_IMAGE_EXTENSIONS,
     ALLOWED_VIDEO_EXTENSIONS,
     THUMBNAIL_SIZE,
@@ -89,9 +90,12 @@ class ShotManager:
         self.order_file = self.shots_dir / '.shot_order.json'
         self.archive_file = self.shots_dir / '.archived_shots.json'
 
+        self.latest_audio_dir = self.shots_dir / 'latest_audio'
+
         self.wip_dir.mkdir(parents=True, exist_ok=True)
         self.latest_images_dir.mkdir(parents=True, exist_ok=True)
         self.latest_videos_dir.mkdir(parents=True, exist_ok=True)
+        self.latest_audio_dir.mkdir(parents=True, exist_ok=True)
         self.thumbnail_cache_dir = get_project_thumbnail_cache_dir(self.project_path)
         self._version_scan_cache = {}  # (shot_name, asset_type) -> max_version
 
@@ -181,7 +185,7 @@ class ShotManager:
 
         old_dir.rename(new_dir)
 
-        for sub in ["images", "videos"]:
+        for sub in ["images", "videos", "audio"]:
             d = new_dir / sub
             if d.exists():
                 # Legacy pattern (e.g., SH001_v001.png) and new image patterns (e.g., SH001_first_v001.png)
@@ -228,6 +232,15 @@ class ShotManager:
         if alt_vid_marker.exists():
             alt_vid_marker.rename(self.latest_videos_dir / f"{new_name}_alt.version")
 
+        # Rename audio files and markers
+        for ext in ALLOWED_AUDIO_EXTENSIONS:
+            audio_src = self.latest_audio_dir / f"{old_name}_audio{ext}"
+            if audio_src.exists():
+                audio_src.rename(self.latest_audio_dir / f"{new_name}_audio{ext}")
+        audio_marker = self.latest_audio_dir / f"{old_name}_audio.version"
+        if audio_marker.exists():
+            audio_marker.rename(self.latest_audio_dir / f"{new_name}_audio.version")
+
         if self.thumbnail_cache_dir.exists():
             for thumb in self.thumbnail_cache_dir.glob(f"{old_name}_*_thumb.jpg"):
                 thumb.rename(self.thumbnail_cache_dir / thumb.name.replace(old_name, new_name, 1))
@@ -255,9 +268,11 @@ class ShotManager:
         # Create subfolders
         (shot_dir / 'images').mkdir(exist_ok=True)
         (shot_dir / 'videos').mkdir(exist_ok=True)
+        (shot_dir / 'audio').mkdir(exist_ok=True)
 
         self.latest_images_dir.mkdir(parents=True, exist_ok=True)
         self.latest_videos_dir.mkdir(parents=True, exist_ok=True)
+        self.latest_audio_dir.mkdir(parents=True, exist_ok=True)
 
         return shot_dir
 
@@ -565,6 +580,27 @@ class ShotManager:
         video_thumb = self._thumbnail_url(latest_video, shot_name, is_video=True) if latest_video else None
         alt_video_thumb = self._thumbnail_url(latest_alt_video, f"{shot_name}_alt", is_video=True) if latest_alt_video else None
 
+        # Audio
+        latest_audio, max_audio_version = self._get_latest_asset(
+            self.latest_audio_dir, shot_dir / 'audio',
+            f'{shot_name}_audio', ALLOWED_AUDIO_EXTENSIONS
+        )
+
+        if max_audio_version == 0:
+            cache_key = (shot_name, 'audio')
+            if cache_key in self._version_scan_cache:
+                detected_audio_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_audio_versions = self._detect_existing_versions(shot_name, 'audio')
+                self._version_scan_cache[cache_key] = detected_audio_versions
+            max_audio_version = max(max_audio_version, detected_audio_versions)
+
+        latest_audio = self._normalize_path(latest_audio)
+        current_audio_version = self.get_current_version(shot_name, 'audio', max_audio_version)
+        audio_prompt = ''
+        if current_audio_version > 0:
+            audio_prompt = self.load_prompt(shot_name, 'audio', current_audio_version)
+
         captions = self.load_captions(shot_name)
 
         # Compose response with backward-compatible 'image' alias pointing to first_image
@@ -608,6 +644,14 @@ class ShotManager:
                 'thumbnail': alt_video_thumb,
                 'prompt': alt_video_prompt,
                 'caption': captions.get('alt_video', ''),
+            },
+            'audio': {
+                'file': latest_audio,
+                'current_version': current_audio_version,
+                'max_version': max_audio_version,
+                'thumbnail': None,  # Audio has no visual thumbnail
+                'prompt': audio_prompt,
+                'caption': captions.get('audio', ''),
             },
             'archived': (shot_name in (archived_names if archived_names is not None else self._load_archived()))
         }
@@ -661,6 +705,9 @@ class ShotManager:
         elif asset_type == 'alt_video':
             wip_dir = shot_dir / 'videos'
             patterns = [f'{shot_name}_alt_v*.*']
+        elif asset_type == 'audio':
+            wip_dir = shot_dir / 'audio'
+            patterns = [f'{shot_name}_audio_v*.*']
         else:
             return 0  # Unsupported asset type
 
@@ -696,6 +743,8 @@ class ShotManager:
             return self.latest_videos_dir / f"{shot_name}.version"
         elif asset_type == 'alt_video':
             return self.latest_videos_dir / f"{shot_name}_alt.version"
+        elif asset_type == 'audio':
+            return self.latest_audio_dir / f"{shot_name}_audio.version"
         else:
             raise ValueError('Invalid asset type')
 
@@ -736,7 +785,7 @@ class ShotManager:
     def promote_asset(self, shot_name, asset_type, version):
         """Promote a specific WIP version to be the current final for image variants/video."""
         validate_shot_name(shot_name)
-        if asset_type not in {'image', 'first_image', 'last_image', 'video', 'alt_video'}:
+        if asset_type not in {'image', 'first_image', 'last_image', 'video', 'alt_video', 'audio'}:
             raise ValueError('Invalid asset type')
 
         shot_dir = self.wip_dir / shot_name
@@ -792,6 +841,10 @@ class ShotManager:
             _ = self.get_thumbnail_path(final_path, shot_name)
             return self._normalize_path(final_path)
 
+        # Audio
+        if asset_type == 'audio':
+            return self.promote_audio_asset(shot_name, int(version))
+
         # Video & Alt Video
         wip_dir = shot_dir / 'videos'
         if not wip_dir.exists():
@@ -834,6 +887,41 @@ class ShotManager:
         _ = self.get_video_thumbnail_path(final_path, base_prefix)
         return self._normalize_path(final_path)
 
+    def promote_audio_asset(self, shot_name, version):
+        """Promote a specific audio WIP version to be the current final."""
+        import shutil as _shutil
+
+        shot_dir = self.wip_dir / shot_name
+        wip_dir = shot_dir / 'audio'
+        if not wip_dir.exists():
+            raise ValueError(f"No audio WIP directory for shot {shot_name}")
+
+        base_prefix = f'{shot_name}_audio'
+
+        src = None
+        for ext in ALLOWED_AUDIO_EXTENSIONS:
+            candidate = wip_dir / f'{base_prefix}_v{int(version):03d}{ext}'
+            if candidate.exists():
+                src = candidate
+                break
+        if not src:
+            raise ValueError(f"Version v{int(version):03d} not found for {shot_name} audio")
+
+        final_dir = self.latest_audio_dir
+        final_dir.mkdir(parents=True, exist_ok=True)
+
+        for existing in final_dir.glob(f"{base_prefix}.*"):
+            try:
+                existing.unlink()
+            except Exception:
+                logger.exception("Error unlinking existing final audio")
+
+        final_path = final_dir / f"{base_prefix}{src.suffix}"
+        _shutil.copy2(str(src), str(final_path))
+
+        self.set_current_version(shot_name, 'audio', int(version))
+        return self._normalize_path(final_path)
+
     def save_shot_notes(self, shot_name, notes):
         """Save notes for a shot."""
         validate_shot_name(shot_name)
@@ -870,7 +958,7 @@ class ShotManager:
     def save_caption(self, shot_name, asset_type, caption):
         """Persist caption text for given asset type for a shot."""
         validate_shot_name(shot_name)
-        if asset_type not in {'first_image', 'last_image', 'video', 'alt_video'}:
+        if asset_type not in {'first_image', 'last_image', 'video', 'alt_video', 'audio'}:
             raise ValueError('Invalid asset type')
         shot_dir = self.wip_dir / shot_name
         if not shot_dir.exists():
@@ -902,6 +990,9 @@ class ShotManager:
         elif asset_type == 'alt_video':
             base_dir = shot_dir / 'videos'
             filename = f'{shot_name}_alt_v{version:03d}_video_prompt.txt'
+        elif asset_type == 'audio':
+            base_dir = shot_dir / 'audio'
+            filename = f'{shot_name}_audio_v{version:03d}_audio_prompt.txt'
         else:
             raise ValueError('Invalid asset type')
         return base_dir / filename
@@ -957,6 +1048,9 @@ class ShotManager:
         elif asset_type == 'alt_video':
             base_dir = shot_dir / 'videos'
             patterns = [f'{shot_name}_alt_v*_video_prompt.txt']
+        elif asset_type == 'audio':
+            base_dir = shot_dir / 'audio'
+            patterns = [f'{shot_name}_audio_v*_audio_prompt.txt']
         else:
             raise ValueError('Invalid asset type')
 
@@ -1179,6 +1273,18 @@ class ShotManager:
                         dst = videos_dir / f"{order:03d}_{shot_name}{display_suffix}_alt{ext}"
                         shutil.copy2(src, dst)
 
+            # Audio
+            if 'audio' in export_type or export_type == 'all':
+                audio_dir = export_dir / 'audio'
+                audio_dir.mkdir(exist_ok=True)
+
+                if info['audio']['file']:
+                    src = Path(info['audio']['file'])
+                    if src.exists():
+                        ext = src.suffix
+                        dst = audio_dir / f"{order:03d}_{shot_name}{display_suffix}_audio{ext}"
+                        shutil.copy2(src, dst)
+
         # Generate metadata if requested
         if include_metadata:
             # Collect data for tables and notes
@@ -1186,6 +1292,7 @@ class ShotManager:
             last_data = []
             video_data = []
             alt_video_data = []
+            audio_data = []
             notes_list = []
 
             for order, shot in enumerate(non_archived_shots, start=1):
@@ -1208,6 +1315,10 @@ class ShotManager:
                 # Alt Video
                 if ('videos' in export_type or export_type == 'all') and (info['alt_video']['caption'] or info['alt_video']['prompt']):
                     alt_video_data.append((order, shot_name, display_name, info['alt_video']['caption'], info['alt_video']['prompt']))
+
+                # Audio
+                if ('audio' in export_type or export_type == 'all') and (info['audio']['caption'] or info['audio']['prompt']):
+                    audio_data.append((order, shot_name, display_name, info['audio']['caption'], info['audio']['prompt']))
 
                 # Notes
                 if info['notes'].strip():
@@ -1278,6 +1389,17 @@ class ShotManager:
                     "|-------|-----------|--------------|----------|---------|"
                 ])
                 for order, name, display_name, caption, prompt in alt_video_data:
+                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+                md_lines.append("")
+
+            # Audio table
+            if audio_data:
+                md_lines.extend([
+                    "## Audio",
+                    "| Order | Shot Name | Display Name | Captions | Prompts |",
+                    "|-------|-----------|--------------|----------|---------|"
+                ])
+                for order, name, display_name, caption, prompt in audio_data:
                     md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
                 md_lines.append("")
 

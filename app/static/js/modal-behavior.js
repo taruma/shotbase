@@ -14,7 +14,8 @@ var _modalCloseMap = {
     'project-info-modal': closeProjectInfoModal,
     'export-modal': closeExportModal,
     'video-modal': closeVideoModal,
-    'image-modal': closeImageModal
+    'image-modal': closeImageModal,
+    'audio-modal': closeAudioModal
 };
 
 // Click outside modal content → close
