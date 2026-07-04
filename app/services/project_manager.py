@@ -216,38 +216,23 @@ class ProjectManager:
             project_path = Path(project_path)
             project_info_path = self.get_project_info_file_path(project_path)
 
-            # Load existing project info or create defaults
-            if project_info_path.exists():
-                try:
-                    with open(project_info_path, encoding='utf-8') as f:
-                        project_info = json.load(f)
-                except Exception as e:
-                    logger.warning("Failed to load existing project info for timestamp update: %s", e)
-                    # Create default structure with created from folder ctime
-                    created_default = datetime.fromtimestamp(project_path.stat().st_ctime).isoformat()
-                    project_info = {
-                        'title': project_path.name,
-                        'description': '',
-                        'short_description': '',
-                        'notes': '',
-                        'tags': [],
-                        'created': created_default,
-                        'updated': datetime.now().isoformat(),
-                        'version': '1.0.0'
-                    }
-            else:
-                # Create default structure with created from folder ctime
-                created_default = datetime.fromtimestamp(project_path.stat().st_ctime).isoformat()
-                project_info = {
-                    'title': project_path.name,
-                    'description': '',
-                    'short_description': '',
-                    'notes': '',
-                    'tags': [],
-                    'created': created_default,
-                    'updated': datetime.now().isoformat(),
-                    'version': '1.0.0'
-                }
+            # If the file doesn't exist, create it properly (once) via load_project_info
+            if not project_info_path.exists():
+                logger.warning("project_info.json missing for %s, creating defaults", project_path)
+                self.load_project_info(project_path)
+                return
+
+            # Load existing project info
+            try:
+                with open(project_info_path, encoding='utf-8') as f:
+                    project_info = json.load(f)
+            except Exception as e:
+                # Can't read the existing file — bail out instead of destroying data
+                logger.warning(
+                    "Failed to read project_info.json for timestamp update (%s): %s",
+                    project_path, e
+                )
+                return
 
             # Update only the timestamp
             project_info['updated'] = datetime.now().isoformat()
