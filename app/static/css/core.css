@@ -1,0 +1,404 @@
+/* ============================================================
+   Core — Reset, variables, body, buttons, forms, notifications, tooltips
+   ============================================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --new-shot-drop-text: 'Drop an asset here to create a new shot.';
+    --new-shot-drop-bg: rgba(0, 200, 81, 0.1);
+    --new-shot-drop-border: 3px dashed #00c851;
+    --new-shot-drop-color: #00c851;
+    --add-version-drop-text: 'Add version +';
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #171717;
+    color: #e5e5e5;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* --- Button Primitives --- */
+
+.dark-button {
+    padding: 10px 20px;
+    background: #3a3a3a;
+    color: #e5e5e5;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.dark-button:hover {
+    background: #505050;
+}
+
+.icon-button {
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.icon-button img {
+    width: 20px;
+    height: 20px;
+}
+
+/* Enhanced button with icon and text */
+.icon-button.has-text {
+    padding: 8px 16px;
+}
+
+.icon-button .button-text {
+    margin-left: 8px;
+    font-weight: 600;
+}
+
+.green-button.icon-button {
+    padding: 10px 16px;
+}
+
+.green-button.icon-button .button-text {
+    margin-left: 8px;
+    font-weight: 600;
+}
+
+/* Menu Button - blue accent for the Back to Menu / home button */
+.menu-button {
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #4a6fa5;
+    color: #e5e5e5;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.menu-button:hover {
+    background: #5a85c0;
+}
+
+.green-button {
+    padding: 10px 20px;
+    background: #00c851;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.green-button:hover {
+    background: #00a143;
+}
+
+.gray-button {
+    padding: 10px 20px;
+    background: #555;
+    color: #e5e5e5;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.gray-button:hover {
+    background: #6b6b6b;
+}
+
+.pill-button {
+    padding: 5px 12px;
+    background: #3a3a3a;
+    color: #e5e5e5;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.link-button {
+    background: transparent;
+    border: 0;
+    color: #b5b5b5;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 2px 0;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-color: #555;
+}
+
+.link-button:hover {
+    color: #e5e5e5;
+    text-decoration-color: currentColor;
+}
+
+/* --- Input Primitives --- */
+
+.path-input {
+    width: 50vw;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background: transparent;
+    color: #eee;
+    font-size: 14px;
+}
+
+/* --- Dropdown --- */
+
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 110%;
+    left: 0;
+    background: #252525;
+    border: 1px solid #444;
+    border-radius: 6px;
+    min-width: 80px;
+    z-index: 100;
+}
+
+.dropdown-menu.show {
+    display: block;
+}
+
+.dropdown-item {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.dropdown-item:hover {
+    background: #3a3a3a;
+}
+
+/* --- Form Elements --- */
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 5px;
+    color: #b5b5b5;
+    font-weight: 500;
+}
+
+.form-input {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background: #2a2a2a;
+    color: #e5e5e5;
+}
+
+.form-textarea {
+    width: 100%;
+    height: 100px;
+    padding: 8px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background: #2a2a2a;
+    color: #e5e5e5;
+    resize: vertical;
+}
+
+.form-input-readonly {
+    background-color: #333;
+    cursor: default;
+}
+
+.form-row {
+    margin-bottom: 15px;
+    display: flex;
+    gap: 10px;
+}
+
+.form-group-half {
+    flex: 1;
+}
+
+/* --- Notifications --- */
+
+.notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #00c851;
+    color: #1a1a1a;
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    transform: translateX(calc(100% + 40px)) translateY(20px);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+    font-weight: 500;
+}
+
+.notification.show {
+    transform: translateX(0) translateY(0);
+}
+
+.notification.error {
+    background: #ff4444;
+    color: #ffffff;
+}
+
+/* --- Tooltips --- */
+
+.tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    z-index: 10000;
+    max-width: 300px;
+    word-wrap: break-word;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    text-align: left;
+    white-space: pre-line;
+}
+
+.tooltip.show {
+    opacity: 1;
+}
+
+/* ============================================================ */
+/* Light Theme Overrides                                         */
+/* ============================================================ */
+
+.light body {
+    background: #f6f6f6;
+    color: #1a1a1a;
+}
+
+.light .dark-button {
+    background: #e0e0e0;
+    color: #1a1a1a;
+}
+
+.light .dark-button:hover {
+    background: #d0d0d0;
+}
+
+.light .menu-button {
+    background: #5a85c0;
+    color: #ffffff;
+}
+
+.light .menu-button:hover {
+    background: #6b9ad8;
+}
+
+.light .green-button {
+    background: #00c851;
+    color: #1a1a1a;
+}
+
+.light .green-button:hover {
+    background: #00a143;
+}
+
+.light .gray-button {
+    background: #e0e0e0;
+    color: #1a1a1a;
+}
+
+.light .gray-button:hover {
+    background: #d0d0d0;
+}
+
+.light .pill-button {
+    background: #eeeeee;
+    color: #1a1a1a;
+}
+
+.light .link-button {
+    color: #555;
+    text-decoration-color: #bbb;
+}
+
+.light .link-button:hover {
+    color: #000;
+}
+
+.light .icon-button .button-text {
+    color: #1a1a1a;
+}
+
+.light .green-button.icon-button .button-text {
+    color: #1a1a1a;
+}
+
+.light .path-input {
+    background: #ffffff;
+    border: 1px solid #ccc;
+    color: #1a1a1a;
+}
+
+.light .dropdown-menu {
+    background: #ffffff;
+    border: 1px solid #ddd;
+}
+
+.light .form-label {
+    color: #1a1a1a;
+}
+
+.light .form-input {
+    background: #ffffff;
+    border: 1px solid #ccc;
+    color: #1a1a1a;
+}
+
+.light .form-textarea {
+    background: #ffffff;
+    border: 1px solid #ccc;
+    color: #1a1a1a;
+}
+
+.light .form-input-readonly {
+    background-color: #f0f0f0;
+    color: #1a1a1a;
+}
+
+.light .notification {
+    background: #00c851;
+    color: #1a1a1a;
+}
+
+.light .notification.error {
+    background: #ff4444;
+    color: #ffffff;
+}
+
+.light .tooltip {
+    background: rgba(255, 255, 255, 0.95);
+    color: #1a1a1a;
+    border: 1px solid #ddd;
+}
