@@ -310,115 +310,115 @@
 }
 
 /* ============================================================ */
-/* Light Theme Overrides */
+/* Light Theme Overrides                                         */
 /* ============================================================ */
-body.light-theme .search-input {
+.light .search-input {
     background: #fff;
     color: #1a1a1a;
     border-color: #ccc;
 }
 
-body.light-theme .search-input:focus {
+.light .search-input:focus {
     border-color: #f0a040;
     box-shadow: 0 0 6px rgba(240, 160, 64, 0.3);
 }
 
-body.light-theme .search-input::placeholder {
+.light .search-input::placeholder {
     color: #999;
 }
 
-body.light-theme .search-filter-label {
+.light .search-filter-label {
     color: #999;
 }
 
-body.light-theme .search-filter-sep {
+.light .search-filter-sep {
     background: #ccc;
 }
 
-body.light-theme .search-filter-pill {
+.light .search-filter-pill {
     border-color: #ccc;
     color: #888;
 }
 
-body.light-theme .search-filter-pill:hover {
+.light .search-filter-pill:hover {
     border-color: #aaa;
     color: #555;
 }
 
-body.light-theme .search-filter-pill.active {
+.light .search-filter-pill.active {
     background: rgba(240, 160, 64, 0.15);
     border-color: #d4880f;
     color: #c0780a;
 }
 
-body.light-theme .search-shot-group {
+.light .search-shot-group {
     background: #f9f9f9;
     border-color: #e0e0e0;
 }
 
-body.light-theme .search-shot-header {
+.light .search-shot-header {
     background: #f0f0f0;
     border-bottom-color: #e0e0e0;
 }
 
-body.light-theme .search-shot-header:hover {
+.light .search-shot-header:hover {
     background: #e8e8e8;
 }
 
-body.light-theme .search-shot-name {
+.light .search-shot-name {
     color: #c0780a;
 }
 
-body.light-theme .search-shot-display {
+.light .search-shot-display {
     color: #666;
 }
 
-body.light-theme .search-match-count {
+.light .search-match-count {
     background: #e8e8e8;
     color: #888;
 }
 
-body.light-theme .search-match-item {
+.light .search-match-item {
     border-bottom-color: #eee;
 }
 
-body.light-theme .search-match-item:hover {
+.light .search-match-item:hover {
     background: #f0f0f0;
 }
 
-body.light-theme .search-clickable.keyboard-focus {
+.light .search-clickable.keyboard-focus {
     background: rgba(240, 160, 64, 0.12);
     border-left-color: #d4880f;
 }
 
-body.light-theme .search-snippet {
+.light .search-snippet {
     color: #555;
 }
 
-body.light-theme .search-snippet mark {
+.light .search-snippet mark {
     background: rgba(240, 160, 64, 0.25);
     color: #a06010;
 }
 
-body.light-theme .search-stats {
+.light .search-stats {
     color: #999;
     border-top-color: #e0e0e0;
 }
 
-body.light-theme .search-placeholder,
-body.light-theme .search-no-results {
+.light .search-placeholder,
+.light .search-no-results {
     color: #aaa;
 }
 
-body.light-theme #search-modal .search-shortcut-hint {
+.light #search-modal .search-shortcut-hint {
     color: #999;
 }
 
-body.light-theme #search-modal .search-shortcut-hint kbd {
+.light #search-modal .search-shortcut-hint kbd {
     background: #e8e8e8;
     border-color: #ccc;
 }
 
-body.light-theme .search-button {
+.light .search-button {
     color: #fff;
 }
