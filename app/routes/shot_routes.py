@@ -148,12 +148,19 @@ def save_shot_prompt():
             return jsonify({"success": False, "error": "No current project"}), 400
 
         shot_manager = get_shot_manager(project["path"])
-        shot_manager.save_prompt(shot_name, asset_type, int(version), prompt)
+        try:
+            version_int = int(version)
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "error": "Version must be an integer"}), 400
+
+        shot_manager.save_prompt(shot_name, asset_type, version_int, prompt)
 
         # Update project timestamp after successful prompt save
         project_manager.update_project_timestamp(project["path"])
 
         return jsonify({"success": True})
+    except ValueError as e:
+        return jsonify({"success": False, "error": str(e)}), 400
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -283,14 +290,14 @@ def serve_thumbnail(filepath):
         project_manager = current_app.config['PROJECT_MANAGER']
         project = project_manager.get_current_project()
         if not project:
-            return "No current project", 400
+            return jsonify({"success": False, "error": "No current project"}), 400
 
         thumb_dir = get_project_thumbnail_cache_dir(project["path"]).resolve()
         thumb_filename = Path(filepath).name
         thumb_path = (thumb_dir / thumb_filename).resolve()
 
         if not str(thumb_path).startswith(str(thumb_dir)):
-            return "Invalid path", 400
+            return jsonify({"success": False, "error": "Invalid path"}), 400
 
         # Lazy generation: if the thumb doesn't exist yet, create it now
         if not thumb_path.is_file():
@@ -307,9 +314,9 @@ def serve_thumbnail(filepath):
             resp.add_etag()
             resp.make_conditional(request)
             return resp
-        return "File not found", 404
+        return jsonify({"success": False, "error": "File not found"}), 404
     except Exception as e:
-        return str(e), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @shot_bp.route("/reveal", methods=["POST"])
 def reveal_file():
@@ -522,7 +529,7 @@ def serve_video(shot_name):
         project_manager = current_app.config['PROJECT_MANAGER']
         project = project_manager.get_current_project()
         if not project:
-            return "No current project", 400
+            return jsonify({"success": False, "error": "No current project"}), 400
 
         shot_manager = get_shot_manager(project["path"])
         shot_info = shot_manager.get_shot_info(shot_name)
@@ -530,16 +537,16 @@ def serve_video(shot_name):
         # Support type query param for alt_video
         asset_type = request.args.get('type', 'video')
         if asset_type not in ('video', 'alt_video'):
-            return "Invalid video type", 400
+            return jsonify({"success": False, "error": "Invalid video type"}), 400
         
         # Get the promoted video file path
         video_path = shot_info[asset_type]['file']
         if not video_path:
-            return f"No {asset_type} found for this shot", 404
+            return jsonify({"success": False, "error": f"No {asset_type} found for this shot"}), 404
             
         video_file = Path(video_path)
         if not video_file.exists():
-            return "Video file not found", 404
+            return jsonify({"success": False, "error": "Video file not found"}), 404
             
         # Serve the video file with proper headers
         resp = send_file(str(video_file))
@@ -547,7 +554,7 @@ def serve_video(shot_name):
         resp.headers["Cache-Control"] = "public, max-age=3600"
         return resp
     except Exception as e:
-        return str(e), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @shot_bp.route("/image/<shot_name>/<asset_type>")
 def serve_image(shot_name, asset_type):
@@ -556,23 +563,23 @@ def serve_image(shot_name, asset_type):
         project_manager = current_app.config['PROJECT_MANAGER']
         project = project_manager.get_current_project()
         if not project:
-            return "No current project", 400
+            return jsonify({"success": False, "error": "No current project"}), 400
 
         shot_manager = get_shot_manager(project["path"])
         shot_info = shot_manager.get_shot_info(shot_name)
         
         # Validate asset type
         if asset_type not in ['first_image', 'last_image']:
-            return "Invalid asset type", 400
+            return jsonify({"success": False, "error": "Invalid asset type"}), 400
             
         # Get the promoted image file path
         image_path = shot_info[asset_type]['file']
         if not image_path:
-            return f"No {asset_type} found for this shot", 404
+            return jsonify({"success": False, "error": f"No {asset_type} found for this shot"}), 404
             
         image_file = Path(image_path)
         if not image_file.exists():
-            return "Image file not found", 404
+            return jsonify({"success": False, "error": "Image file not found"}), 404
             
         # Serve the image file with proper headers
         resp = send_file(str(image_file))
@@ -580,7 +587,7 @@ def serve_image(shot_name, asset_type):
         resp.headers["Cache-Control"] = "public, max-age=3600"
         return resp
     except Exception as e:
-        return str(e), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @shot_bp.route("/audio/<shot_name>")
 def serve_audio(shot_name):
@@ -589,25 +596,25 @@ def serve_audio(shot_name):
         project_manager = current_app.config['PROJECT_MANAGER']
         project = project_manager.get_current_project()
         if not project:
-            return "No current project", 400
+            return jsonify({"success": False, "error": "No current project"}), 400
 
         shot_manager = get_shot_manager(project["path"])
         shot_info = shot_manager.get_shot_info(shot_name)
 
         audio_path = shot_info['audio']['file']
         if not audio_path:
-            return "No audio found for this shot", 404
+            return jsonify({"success": False, "error": "No audio found for this shot"}), 404
 
         audio_file = Path(audio_path)
         if not audio_file.exists():
-            return "Audio file not found", 404
+            return jsonify({"success": False, "error": "Audio file not found"}), 404
 
         resp = send_file(str(audio_file))
         resp.headers["Content-Disposition"] = f'inline; filename="{audio_file.name}"'
         resp.headers["Cache-Control"] = "public, max-age=3600"
         return resp
     except Exception as e:
-        return str(e), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 @shot_bp.route("/display-name", methods=["POST"])
 def set_display_name():
