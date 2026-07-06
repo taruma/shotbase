@@ -701,6 +701,9 @@ function renderShots() {
 
         activeShots.forEach((shot, index) => {
             const shotRow = createShotRow(shot);
+            if (index % 2 === 1) {
+                shotRow.classList.add('even');
+            }
             activeContainer.appendChild(shotRow);
 
             if (index < activeShots.length - 1) {

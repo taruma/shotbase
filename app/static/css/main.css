@@ -268,6 +268,14 @@ body {
     background: #2a2a2a;
 }
 
+.shot-row.even {
+    background: rgba(255, 255, 255, 0.025);
+}
+
+.shot-row.even:hover {
+    background: #2a2a2a;
+}
+
 .shot-row.archived {
     opacity: 0.5;
     background: #2a2a2a;

@@ -58,6 +58,14 @@ body.light {
     background: #f5f5f5;
 }
 
+.light .shot-row.even {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.light .shot-row.even:hover {
+    background: #f5f5f5;
+}
+
 .light .path-input {
     background: #ffffff;
     border: 1px solid #ccc;
