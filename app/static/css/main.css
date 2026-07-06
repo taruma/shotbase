@@ -1715,7 +1715,7 @@ body {
     opacity: 0;
     transition: opacity 0.2s ease;
     text-align: left;
-    white-space: normal;
+    white-space: pre-line;
 }
 
 .tooltip.show {

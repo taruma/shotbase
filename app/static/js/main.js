@@ -1942,8 +1942,8 @@ function initTooltips() {
         const prompt = shot[assetType].prompt;
         if (!prompt.trim()) return;
 
-        // Set tooltip content
-        tooltip.textContent = prompt;
+        // Set tooltip content — middle-truncate long prompts
+        tooltip.innerHTML = truncateMiddle(prompt, 750, 350, 350);
 
         // Show tooltip
         tooltip.classList.add('show');
@@ -1994,6 +1994,46 @@ function positionTooltip(tooltip, event) {
     if (rect.bottom > windowHeight) {
         tooltip.style.top = (event.clientY + window.scrollY - rect.height - padding) + 'px';
     }
+}
+
+/**
+ * Truncate text by keeping the beginning and end, replacing the middle with an ellipsis.
+ * Breaks on word boundaries and separates sections with newlines.
+ * @param {string} text - The full text.
+ * @param {number} [maxLen=750] - Only truncate if text exceeds this length.
+ * @param {number} [keepStart=350] - Characters to keep from the start.
+ * @param {number} [keepEnd=350] - Characters to keep from the end.
+ * @param {number} [searchWindow=20] - Max chars to search for a word boundary.
+ * @returns {string}
+ */
+function truncateMiddle(text, maxLen = 750, keepStart = 350, keepEnd = 350, searchWindow = 20) {
+    // Trim and collapse excessive blank lines (3+ newlines → 2)
+    text = text.trim().replace(/\n{3,}/g, '\n\n');
+
+    if (text.length <= maxLen) return text;
+
+    // Find word boundary near keepStart (look backward for a space or newline)
+    let startCut = keepStart;
+    for (let i = keepStart; i >= Math.max(0, keepStart - searchWindow); i--) {
+        if (text[i] === ' ' || text[i] === '\n') {
+            startCut = i;
+            break;
+        }
+    }
+
+    // Find word boundary near keepEnd (look forward for a space or newline from the end portion)
+    let endCut = keepEnd;
+    for (let i = text.length - keepEnd; i <= Math.min(text.length - 1, text.length - keepEnd + searchWindow); i++) {
+        if (text[i] === ' ' || text[i] === '\n') {
+            endCut = text.length - i;
+            break;
+        }
+    }
+
+    const beginPart = text.slice(0, startCut).trimEnd();
+    const endPart = text.slice(text.length - endCut).trimStart();
+
+    return escapeHtml(beginPart) + '\n\n<div style="text-align:center">\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500 \u2702 \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</div>\n\n' + escapeHtml(endPart);
 }
 
 // Project Information Modal Functions
