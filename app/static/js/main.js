@@ -415,6 +415,7 @@ function updateProjectHeader(info, fallbackName) {
 }
 
 function showMainInterface() {
+    window.scrollTo(0, 0);
     document.getElementById('setup-screen').style.display = 'none';
     document.getElementById('main-interface').style.display = 'block';
     updateProjectHeader(currentProject.info || {}, currentProject.name);
