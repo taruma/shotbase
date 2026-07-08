@@ -73,7 +73,7 @@ shotbuddy/
 │   │   ├── file_handler.py     # Uploads and asset processing
 │   ├── config/            # Configuration (constants.py)
 │   └── static/            # Static assets
-│       ├── css/           # main.css, styles.css, search-modal.css, visual-reorder.css
+│       ├── css/           # core.css, layout.css, shot-grid.css, modals.css, main.css, styles.css, visual-reorder.css, search-modal.css
 │       ├── js/            # main.js, search-modal.js, visual-reorder.js, modal-behavior.js
 │       └── icons/         # Favicons, PWA manifest, folder icon
 ├── shots/                  # Project data directory (created per project)
@@ -373,7 +373,15 @@ Every project directory contains these files (under `shots/`):
 
 ### Structure
 - **Single SPA**: `app/templates/index.html` — one Jinja2 template, `{{ version }}` injected
-- **CSS**: `app/static/css/main.css` (primary styles, dark theme default), `app/static/css/styles.css` (light theme overrides), `app/static/css/search-modal.css` (search modal styles), `app/static/css/visual-reorder.css` (visual reorder grid styles)
+- **CSS** (loaded in order):
+  - `app/static/css/core.css` — reset, CSS variables, body, buttons, forms, notifications, tooltips
+  - `app/static/css/layout.css` — header, TOC panel, setup screen, footer, back-to-top, archived sections
+  - `app/static/css/shot-grid.css` — grid, rows, drop zones, thumbnails, badges, notes, captions, drag-and-drop
+  - `app/static/css/modals.css` — all modals (prompt, reorder, export, video, image, audio, project-info, create-project)
+  - `app/static/css/main.css` — remaining primary styles not split into modules
+  - `app/static/css/styles.css` — light theme overrides (loaded last among app styles)
+  - `app/static/css/visual-reorder.css` — visual reorder grid styles
+  - `app/static/css/search-modal.css` — search modal layout, filter pills, snippet styling, keyboard focus
 - **JavaScript**: 
   - `app/static/js/main.js` — monolithic SPA core: shot grid (with audio playback column), TOC, upload, export, modals, drag-and-drop, theme toggle
   - `app/static/js/search-modal.js` — client-side search with in-memory index, multi-token matching, filter pills, keyboard nav
@@ -395,10 +403,15 @@ Key patterns:
 - Dynamic page title: browser tab updates with project info and app version on screen transitions
 
 ### CSS Organization
-- `main.css`: base layout, dark theme, shot grid, TOC panel, modals, tooltips, buttons, sticky header, drag-drop; `.export-utility-row` for export modal utility button spacing
-- `styles.css`: light theme overrides only (loaded after main.css)
-- `search-modal.css`: search modal layout, filter pills, snippet styling, keyboard focus
-- `visual-reorder.css`: responsive 5-column grid, cards, thumbnail selectors, preview/edit mode styles
+CSS is split into modular files, loaded in the order listed in `index.html` (see Structure above). Each file has a header comment describing its contents:
+- `core.css` (404 lines) — reset, CSS variables, body styling, button primitives, form inputs, notification toasts, tooltips
+- `layout.css` (560 lines) — header bar, TOC side panel, setup screen, footer, back-to-top button, archived section collapsible
+- `shot-grid.css` (586 lines) — shot grid layout, row structure, drop zones, thumbnail sizing, version badges, notes display, captions, drag-and-drop styling
+- `modals.css` (893 lines) — prompt modal, reorder modal, export modal (with `.export-utility-row`), video/image/audio viewers, project-info modal, create-project modal
+- `main.css` — remaining primary styles (dark theme default) not split into modules
+- `styles.css` — light theme overrides only (loaded after all other CSS)
+- `visual-reorder.css` — responsive 5-column grid, cards, thumbnail selectors, preview/edit mode styles
+- `search-modal.css` — search modal layout, filter pills, snippet styling, keyboard focus
 
 ---
 
@@ -426,7 +439,7 @@ Key patterns:
 
 ### Adding a UI Component
 1. Add HTML structure to `app/templates/index.html`
-2. Add styles to the appropriate CSS file (new component-specific file or `main.css`) + light overrides in `styles.css`
+2. Add styles to the appropriate CSS file (new module-specific file or `core.css` for shared primitives) + light overrides in `styles.css`
 3. Add JavaScript logic to the appropriate JS file (new component-specific file or `main.js`)
 4. Use `data-*` attributes for event binding (follow existing pattern)
 5. Register modal close behavior in `modal-behavior.js` if adding a new modal
