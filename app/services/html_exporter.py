@@ -9,7 +9,6 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-
 # ── embedded CSS ──────────────────────────────────────────────────────────
 CSS = """\
 /* ShotBase HTML Export Styles */
