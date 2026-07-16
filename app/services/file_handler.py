@@ -11,7 +11,7 @@ from app.config.constants import (
     THUMBNAIL_SIZE,
     get_project_thumbnail_cache_dir,
 )
-from app.services.shot_manager import get_shot_manager
+from app.services.shot_utils import get_shot_manager
 
 logger = logging.getLogger(__name__)
 

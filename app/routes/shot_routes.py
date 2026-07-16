@@ -8,7 +8,7 @@ from flask import Blueprint, current_app, jsonify, request, send_file
 
 from app.config.constants import get_project_thumbnail_cache_dir
 from app.services.file_handler import FileHandler
-from app.services.shot_manager import get_shot_manager
+from app.services.shot_utils import get_shot_manager
 
 shot_bp = Blueprint('shot', __name__)
 

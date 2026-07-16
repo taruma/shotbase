@@ -1,6 +1,4 @@
-import json
 import logging
-import re
 from pathlib import Path
 
 from PIL import Image
@@ -12,74 +10,19 @@ from app.config.constants import (
     THUMBNAIL_SIZE,
     get_project_thumbnail_cache_dir,
 )
-from app.services.project_manager import ProjectManager
+from app.services.shot_utils import validate_shot_name
 
 logger = logging.getLogger(__name__)
 
-# Shot names may optionally contain a single underscore followed by another
-# three-digit number (e.g. ``SH001_050``).  Deeper nesting with multiple
-# underscores is not allowed.
-SHOT_NAME_RE = re.compile(r"^SH\d{3}(?:_\d{3})?$")
-
-
-def validate_shot_name(name):
-    if not SHOT_NAME_RE.match(name):
-        raise ValueError(f"Invalid shot name: {name}")
-    if name == "SH000":
-        raise ValueError("Invalid shot name: SH000")
-
-
-def _parse_shot_parts(name):
-    """Return the numeric segments for a shot name."""
-    return [int(p) for p in name[2:].split("_")]
-
-
-def _format_shot_parts(parts):
-    """Format numeric segments back into a shot name."""
-    base = f"SH{parts[0]:03d}"
-    for p in parts[1:]:
-        base += f"_{p:03d}"
-    return base
-
-
-def _meta_file(shot_name):
-    """Return path to the meta JSON for a shot."""
-    return Path("shots") / "wip" / shot_name / "meta.json"
-
-
-def _project_meta_file(project_path, shot_name):
-    """Return path to the project-scoped meta JSON for a shot."""
-    return Path(project_path) / "shots" / "wip" / shot_name / "meta.json"
-
-
-def load_meta(shot_name):
-    """Load meta dict for a shot."""
-    validate_shot_name(shot_name)
-    path = _meta_file(shot_name)
-    try:
-        if path.exists():
-            with path.open('r', encoding='utf-8') as f:
-                data = json.load(f)
-                if isinstance(data, dict):
-                    return data
-    except Exception:
-        logger.exception("Error loading shot meta")
-    return {}
-
-
-def save_display_name(shot_name, display_name):
-    """Persist display name for a shot."""
-    validate_shot_name(shot_name)
-    path = _meta_file(shot_name)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        with path.open('w', encoding='utf-8') as f:
-            json.dump({"display_name": display_name}, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        raise ValueError(f"Failed to save display name: {str(e)}")
-
 
 class ShotManager:
+    """Facade that orchestrates shot lifecycle, asset management, and export.
+
+    Delegates order/archive I/O to ``ShotOrderManager``, metadata CRUD to
+    ``ShotMetadata``, prompt I/O to ``PromptStore``, and export logic to
+    ``ExportService``.
+    """
+
     def __init__(self, project_path):
         self.project_path = Path(project_path)
         self.shots_dir = self.project_path / 'shots'
@@ -99,70 +42,140 @@ class ShotManager:
         self.thumbnail_cache_dir = get_project_thumbnail_cache_dir(self.project_path)
         self._version_scan_cache = {}  # (shot_name, asset_type) -> max_version
 
+        # ------------------------------------------------------------------
+        # Sub-service instances (lazy — created on first access so that
+        # route handlers that never touch certain features don't pay the
+        # import cost).
+        # ------------------------------------------------------------------
+        self._order_mgr = None
+        self._metadata = None
+        self._prompts = None
+        self._exporter = None
+
+    # ------------------------------------------------------------------
+    # Lazy sub-service accessors
+    # ------------------------------------------------------------------
+
+    @property
+    def order(self):
+        if self._order_mgr is None:
+            from app.services.shot_order import ShotOrderManager
+            self._order_mgr = ShotOrderManager(self.project_path)
+        return self._order_mgr
+
+    @property
+    def metadata(self):
+        if self._metadata is None:
+            from app.services.metadata import ShotMetadata
+            self._metadata = ShotMetadata(self.project_path)
+        return self._metadata
+
+    @property
+    def prompts(self):
+        if self._prompts is None:
+            from app.services.prompts import PromptStore
+            self._prompts = PromptStore(self.project_path)
+        return self._prompts
+
+    @property
+    def exporter(self):
+        if self._exporter is None:
+            from app.services.export_service import ExportService
+            self._exporter = ExportService(self)
+        return self._exporter
+
+    # ==================================================================
+    # Shot order (delegated → ShotOrderManager)
+    # ==================================================================
+
     def _load_shot_order(self):
-        """Load shot order list from JSON file."""
-        try:
-            if self.order_file.exists():
-                with self.order_file.open('r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    if isinstance(data, list):
-                        return data
-        except Exception:
-            logger.exception("Error loading shot order")
-        return []
+        return self.order.load_shot_order()
 
     def _save_shot_order(self, names):
-        """Persist shot order list to JSON file."""
-        try:
-            cleaned = []
-            seen = set()
-            for name in names:
-                if isinstance(name, str) and name not in seen:
-                    cleaned.append(name)
-                    seen.add(name)
-            self.shots_dir.mkdir(parents=True, exist_ok=True)
-            with self.order_file.open('w', encoding='utf-8') as f:
-                json.dump(cleaned, f)
-        except Exception:
-            logger.warning("Failed to save shot order file")
+        return self.order.save_shot_order(names)
+
+    def save_shot_order(self, shot_order):
+        if not isinstance(shot_order, list):
+            raise ValueError('Shot order must be a list')
+        self.order.save_shot_order(shot_order)
+
+    # ==================================================================
+    # Archive (delegated → ShotOrderManager)
+    # ==================================================================
 
     def _load_archived(self):
-        """Load archived shot names from JSON file."""
-        import json
-        try:
-            if self.archive_file.exists():
-                with self.archive_file.open('r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    if isinstance(data, list):
-                        return set(data)
-        except Exception:
-            logger.exception("Error loading archived shots")
-        return set()
+        return self.order.load_archived()
 
-    def _save_archived(self, names: set):
-        """Persist archived shot names to JSON file."""
-        import json
-        try:
-            self.shots_dir.mkdir(parents=True, exist_ok=True)
-            with self.archive_file.open('w', encoding='utf-8') as f:
-                json.dump(sorted(list(names)), f)
-        except Exception:
-            logger.warning("Failed to save archived shots file")
+    def _save_archived(self, names):
+        return self.order.save_archived(names)
 
     def archive_shot(self, shot_name, archived: bool):
         """Toggle archived state for a shot and return updated shot info."""
-        validate_shot_name(shot_name)
-        shot_dir = self.wip_dir / shot_name
-        if not shot_dir.exists():
-            raise ValueError(f"Shot {shot_name} does not exist")
-
-        names = self._load_archived()
-        if archived:
-            names.add(shot_name)
-        else:
-            names.discard(shot_name)
-        self._save_archived(names)
+        self.order.toggle_archived(shot_name, archived)
         return self.get_shot_info(shot_name)
+
+    # ==================================================================
+    # Metadata — notes, captions, display name (delegated → ShotMetadata)
+    # ==================================================================
+
+    def load_meta(self, shot_name):
+        return self.metadata.load_meta(shot_name)
+
+    def save_display_name(self, shot_name, display_name):
+        return self.metadata.save_display_name(shot_name, display_name)
+
+    def save_shot_notes(self, shot_name, notes):
+        return self.metadata.save_notes(shot_name, notes)
+
+    def _captions_file(self, shot_name):
+        return self.metadata._captions_file(shot_name)
+
+    def load_captions(self, shot_name):
+        return self.metadata.load_captions(shot_name)
+
+    def save_caption(self, shot_name, asset_type, caption):
+        return self.metadata.save_caption(shot_name, asset_type, caption)
+
+    # ==================================================================
+    # Prompts (delegated → PromptStore)
+    # ==================================================================
+
+    def _prompt_file_path(self, shot_name, asset_type, version):
+        return self.prompts._prompt_file_path(shot_name, asset_type, version)
+
+    def load_prompt(self, shot_name, asset_type, version):
+        return self.prompts.load_prompt(shot_name, asset_type, version)
+
+    def save_prompt(self, shot_name, asset_type, version, prompt):
+        return self.prompts.save_prompt(shot_name, asset_type, version, prompt)
+
+    def get_prompt_versions(self, shot_name, asset_type):
+        return self.prompts.get_prompt_versions(shot_name, asset_type)
+
+    # ==================================================================
+    # Export (delegated → ExportService)
+    # ==================================================================
+
+    def export_latest_assets(self, export_name=None, export_type='all',
+                             include_display_in_filename=True, include_metadata=True,
+                             export_format='md'):
+        return self.exporter.export_latest_assets(
+            export_name=export_name,
+            export_type=export_type,
+            include_display_in_filename=include_display_in_filename,
+            include_metadata=include_metadata,
+            export_format=export_format,
+        )
+
+    def _write_md_export(self, export_dir, non_archived_shots, project_info, export_type, timestamp):
+        return self.exporter._write_md_export(export_dir, non_archived_shots, project_info, export_type, timestamp)
+
+    def _write_html_export(self, export_dir, non_archived_shots, project_info, export_type, timestamp):
+        return self.exporter._write_html_export(export_dir, non_archived_shots, project_info, export_type, timestamp)
+
+    # ==================================================================
+    # Shot CRUD (still on ShotManager — orchestrates multiple sub-services)
+    # ==================================================================
 
     @staticmethod
     def _normalize_path(path):
@@ -249,11 +262,11 @@ class ShotManager:
 
         # Preserve archived state across rename
         try:
-            names = self._load_archived()
+            names = self.order.load_archived()
             if old_name in names:
                 names.discard(old_name)
                 names.add(new_name)
-                self._save_archived(names)
+                self.order.save_archived(names)
         except Exception:
             logger.exception("Error updating archived state during rename")
 
@@ -307,7 +320,7 @@ class ShotManager:
 
         shot_dirs = [d for d in self.wip_dir.iterdir() if d.is_dir() and d.name.startswith('SH')]
         
-        ordered_names = self._load_shot_order()
+        ordered_names = self.order.load_shot_order()
         if ordered_names:
             dir_map = {d.name: d for d in shot_dirs}
             ordered_dirs = [dir_map[name] for name in ordered_names if name in dir_map]
@@ -318,15 +331,9 @@ class ShotManager:
             shot_dirs = sorted(shot_dirs, key=lambda d: d.name)
 
         # Cache archived set once so get_shot_info() doesn't re-read from disk per shot
-        archived_names = self._load_archived()
+        archived_names = self.order.load_archived()
         shots = [self.get_shot_info(shot_dir.name, archived_names=archived_names) for shot_dir in shot_dirs]
         return shots
-
-    def save_shot_order(self, shot_order):
-        """Save the order of shots."""
-        if not isinstance(shot_order, list):
-            raise ValueError('Shot order must be a list')
-        self._save_shot_order(shot_order)
 
     def create_shot_between(self, after_shot=None):
         """Create a new shot between existing shots.
@@ -367,7 +374,7 @@ class ShotManager:
 
         self.create_shot_structure(shot_name)
 
-        order_names = self._load_shot_order()
+        order_names = self.order.load_shot_order()
         if order_names:
             existing_order_set = set(order_names)
             for name in existing:
@@ -390,7 +397,7 @@ class ShotManager:
         if not order_names:
             order_names = [shot_name]
 
-        self._save_shot_order(order_names)
+        self.order.save_shot_order(order_names)
 
         return self.get_shot_info(shot_name)
 
@@ -420,242 +427,9 @@ class ShotManager:
 
         return f"{base_shot}_{next_num:03d}"
 
-    def load_meta(self, shot_name):
-        """Load meta dict for a shot from project path, with fallback to app-level."""
-        validate_shot_name(shot_name)
-        project_path = getattr(self, 'project_path', None)
-        if project_path:
-            path = _project_meta_file(project_path, shot_name)
-            try:
-                if path.exists():
-                    with path.open('r', encoding='utf-8') as f:
-                        data = json.load(f)
-                        if isinstance(data, dict):
-                            return data
-            except Exception:
-                logger.exception("Error loading project meta")
-        # Fallback to app-level meta (for legacy data)
-        return load_meta(shot_name)
-
-    def save_display_name(self, shot_name, display_name):
-        """Persist display name for a shot in project path."""
-        validate_shot_name(shot_name)
-        project_path = getattr(self, 'project_path', None)
-        if not project_path:
-            raise ValueError("Project path not set")
-        path = _project_meta_file(project_path, shot_name)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with path.open('w', encoding='utf-8') as f:
-                json.dump({"display_name": display_name}, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            raise ValueError(f"Failed to save display name: {str(e)}")
-
-    @staticmethod
-    def _thumbnail_url(asset_path, shot_name, is_video=False):
-        """Compute thumbnail URL without generating the file (lazy).
-
-        Returns the URL path that the thumbnail *would* have, based solely on
-        the source asset stem and shot name.  Actual generation is deferred to
-        the first request through ``/api/shots/thumbnail/``.
-        """
-        if not asset_path:
-            return None
-        p = Path(asset_path)
-        suffix = "_vthumb" if is_video else "_thumb"
-        return f"/api/shots/thumbnail/{shot_name}_{p.stem}{suffix}.jpg"
-
-    def get_shot_info(self, shot_name, archived_names=None):
-        """Get information about a specific shot."""
-        validate_shot_name(shot_name)
-        shot_dir = self.wip_dir / shot_name
-
-        # Load notes
-        notes = ''
-        notes_file = shot_dir / 'notes.txt'
-        if notes_file.exists():
-            try:
-                with open(notes_file, encoding='utf-8') as f:
-                    notes = f.read().strip()
-            except Exception:
-                logger.exception("Error loading shot notes")
-
-
-        # First/Last images
-        # New naming for first frame
-        first_image_path, first_max_version = self._get_latest_asset(
-            self.latest_images_dir, shot_dir / 'images',
-            f'{shot_name}_first', ALLOWED_IMAGE_EXTENSIONS
-        )
-        # Only fall back to legacy naming if modern '_first' naming found nothing
-        if not first_image_path and first_max_version == 0:
-            legacy_image_path, legacy_max_version = self._get_latest_asset(
-                self.latest_images_dir, shot_dir / 'images',
-                shot_name, ALLOWED_IMAGE_EXTENSIONS
-            )
-            if legacy_image_path or legacy_max_version > 0:
-                first_image_path = legacy_image_path
-                first_max_version = legacy_max_version
-
-        # New naming for last frame
-        last_image_path, last_max_version = self._get_latest_asset(
-            self.latest_images_dir, shot_dir / 'images',
-            f'{shot_name}_last', ALLOWED_IMAGE_EXTENSIONS
-        )
-
-        # Detect existing versions if max_version seems inaccurate (cached per ShotManager instance)
-        if first_max_version == 0:
-            cache_key = (shot_name, 'first_image')
-            if cache_key in self._version_scan_cache:
-                detected_first_versions = self._version_scan_cache[cache_key]
-            else:
-                detected_first_versions = self._detect_existing_versions(shot_name, 'first_image')
-                self._version_scan_cache[cache_key] = detected_first_versions
-            first_max_version = max(first_max_version, detected_first_versions)
-
-        if last_max_version == 0:
-            cache_key = (shot_name, 'last_image')
-            if cache_key in self._version_scan_cache:
-                detected_last_versions = self._version_scan_cache[cache_key]
-            else:
-                detected_last_versions = self._detect_existing_versions(shot_name, 'last_image')
-                self._version_scan_cache[cache_key] = detected_last_versions
-            last_max_version = max(last_max_version, detected_last_versions)
-
-        first_image_path = self._normalize_path(first_image_path)
-        last_image_path = self._normalize_path(last_image_path)
-
-        current_first_version = self.get_current_version(shot_name, 'first_image', first_max_version)
-        first_prompt = self.load_prompt(shot_name, 'first_image', current_first_version) if current_first_version > 0 else ''
-
-        current_last_version = self.get_current_version(shot_name, 'last_image', last_max_version)
-        last_prompt = self.load_prompt(shot_name, 'last_image', current_last_version) if current_last_version > 0 else ''
-
-        # Latest video
-        latest_video, max_video_version = self._get_latest_asset(
-            self.latest_videos_dir, shot_dir / 'videos',
-            shot_name, ALLOWED_VIDEO_EXTENSIONS
-        )
-        
-        # Detect existing video versions if max_version seems inaccurate (cached per ShotManager instance)
-        if max_video_version == 0:
-            cache_key = (shot_name, 'video')
-            if cache_key in self._version_scan_cache:
-                detected_video_versions = self._version_scan_cache[cache_key]
-            else:
-                detected_video_versions = self._detect_existing_versions(shot_name, 'video')
-                self._version_scan_cache[cache_key] = detected_video_versions
-            max_video_version = max(max_video_version, detected_video_versions)
-            
-        latest_video = self._normalize_path(latest_video)
-        current_video_version = self.get_current_version(shot_name, 'video', max_video_version)
-        video_prompt = ''
-        if current_video_version > 0:
-            video_prompt = self.load_prompt(shot_name, 'video', current_video_version)
-
-        # Alt video
-        latest_alt_video, max_alt_video_version = self._get_latest_asset(
-            self.latest_videos_dir, shot_dir / 'videos',
-            f'{shot_name}_alt', ALLOWED_VIDEO_EXTENSIONS
-        )
-        
-        if max_alt_video_version == 0:
-            cache_key = (shot_name, 'alt_video')
-            if cache_key in self._version_scan_cache:
-                detected_alt_video_versions = self._version_scan_cache[cache_key]
-            else:
-                detected_alt_video_versions = self._detect_existing_versions(shot_name, 'alt_video')
-                self._version_scan_cache[cache_key] = detected_alt_video_versions
-            max_alt_video_version = max(max_alt_video_version, detected_alt_video_versions)
-            
-        latest_alt_video = self._normalize_path(latest_alt_video)
-        current_alt_video_version = self.get_current_version(shot_name, 'alt_video', max_alt_video_version)
-        alt_video_prompt = ''
-        if current_alt_video_version > 0:
-            alt_video_prompt = self.load_prompt(shot_name, 'alt_video', current_alt_video_version)
-
-        # Thumbnails — lazy: compute URL path only; generation deferred to first browser request
-        first_thumb = self._thumbnail_url(first_image_path, shot_name, is_video=False) if first_image_path else None
-        last_thumb = self._thumbnail_url(last_image_path, shot_name, is_video=False) if last_image_path else None
-        video_thumb = self._thumbnail_url(latest_video, shot_name, is_video=True) if latest_video else None
-        alt_video_thumb = self._thumbnail_url(latest_alt_video, f"{shot_name}_alt", is_video=True) if latest_alt_video else None
-
-        # Audio
-        latest_audio, max_audio_version = self._get_latest_asset(
-            self.latest_audio_dir, shot_dir / 'audio',
-            f'{shot_name}_audio', ALLOWED_AUDIO_EXTENSIONS
-        )
-
-        if max_audio_version == 0:
-            cache_key = (shot_name, 'audio')
-            if cache_key in self._version_scan_cache:
-                detected_audio_versions = self._version_scan_cache[cache_key]
-            else:
-                detected_audio_versions = self._detect_existing_versions(shot_name, 'audio')
-                self._version_scan_cache[cache_key] = detected_audio_versions
-            max_audio_version = max(max_audio_version, detected_audio_versions)
-
-        latest_audio = self._normalize_path(latest_audio)
-        current_audio_version = self.get_current_version(shot_name, 'audio', max_audio_version)
-        audio_prompt = ''
-        if current_audio_version > 0:
-            audio_prompt = self.load_prompt(shot_name, 'audio', current_audio_version)
-
-        captions = self.load_captions(shot_name)
-
-        # Compose response with backward-compatible 'image' alias pointing to first_image
-        first_image_dict = {
-            'file': first_image_path,
-            'current_version': current_first_version,
-            'max_version': first_max_version,
-            'thumbnail': first_thumb,
-            'prompt': first_prompt,
-            'caption': captions.get('first_image', ''),
-        }
-        last_image_dict = {
-            'file': last_image_path,
-            'current_version': current_last_version,
-            'max_version': last_max_version,
-            'thumbnail': last_thumb,
-            'prompt': last_prompt,
-            'caption': captions.get('last_image', ''),
-        }
-
-        meta = self.load_meta(shot_name)
-        return {
-            'name': shot_name,
-            'display_name': meta.get('display_name', ''),
-            'notes': notes,
-            'first_image': first_image_dict,
-            'last_image': last_image_dict,
-            'image': first_image_dict,  # backward compatibility
-            'video': {
-                'file': latest_video,
-                'current_version': current_video_version,
-                'max_version': max_video_version,
-                'thumbnail': video_thumb,
-                'prompt': video_prompt,
-                'caption': captions.get('video', ''),
-            },
-            'alt_video': {
-                'file': latest_alt_video,
-                'current_version': current_alt_video_version,
-                'max_version': max_alt_video_version,
-                'thumbnail': alt_video_thumb,
-                'prompt': alt_video_prompt,
-                'caption': captions.get('alt_video', ''),
-            },
-            'audio': {
-                'file': latest_audio,
-                'current_version': current_audio_version,
-                'max_version': max_audio_version,
-                'thumbnail': None,  # Audio has no visual thumbnail
-                'prompt': audio_prompt,
-                'caption': captions.get('audio', ''),
-            },
-            'archived': (shot_name in (archived_names if archived_names is not None else self._load_archived()))
-        }
-
+    # ==================================================================
+    # Asset discovery & versioning (still on ShotManager)
+    # ==================================================================
 
     def _get_latest_asset(self, final_dir, wip_dir, shot_name, extensions):
         """Helper for finding the latest final or highest versioned WIP asset."""
@@ -781,6 +555,10 @@ class ShotManager:
         marker = self._version_marker_path(asset_type, shot_name)
         marker.parent.mkdir(parents=True, exist_ok=True)
         marker.write_text(str(int(version)), encoding='utf-8')
+
+    # ==================================================================
+    # Asset promotion (still on ShotManager — orchestration logic)
+    # ==================================================================
 
     def promote_asset(self, shot_name, asset_type, version):
         """Promote a specific WIP version to be the current final for image variants/video."""
@@ -922,152 +700,23 @@ class ShotManager:
         self.set_current_version(shot_name, 'audio', int(version))
         return self._normalize_path(final_path)
 
-    def save_shot_notes(self, shot_name, notes):
-        """Save notes for a shot."""
-        validate_shot_name(shot_name)
-        shot_dir = self.wip_dir / shot_name
-        if not shot_dir.exists():
-            raise ValueError(f"Shot {shot_name} does not exist")
+    # ==================================================================
+    # Thumbnails (still on ShotManager — Pillow/ffmpeg logic)
+    # ==================================================================
 
-        notes_file = shot_dir / 'notes.txt'
-        try:
-            with open(notes_file, 'w', encoding='utf-8') as f:
-                f.write(notes)
-        except Exception as e:
-            raise ValueError(f"Failed to save notes: {str(e)}")
+    @staticmethod
+    def _thumbnail_url(asset_path, shot_name, is_video=False):
+        """Compute thumbnail URL without generating the file (lazy).
 
-    def _captions_file(self, shot_name):
-        """Return path to the captions JSON for a shot."""
-        return (self.wip_dir / shot_name) / 'captions.json'
-
-    def load_captions(self, shot_name):
-        """Load captions dict for a shot."""
-        validate_shot_name(shot_name)
-        path = self._captions_file(shot_name)
-        try:
-            import json
-            if path.exists():
-                with path.open('r', encoding='utf-8') as f:
-                    data = json.load(f)
-                    if isinstance(data, dict):
-                        return data
-        except Exception:
-            logger.exception("Error loading shot captions")
-        return {}
-
-    def save_caption(self, shot_name, asset_type, caption):
-        """Persist caption text for given asset type for a shot."""
-        validate_shot_name(shot_name)
-        if asset_type not in {'first_image', 'last_image', 'video', 'alt_video', 'audio'}:
-            raise ValueError('Invalid asset type')
-        shot_dir = self.wip_dir / shot_name
-        if not shot_dir.exists():
-            raise ValueError(f"Shot {shot_name} does not exist")
-        captions = self.load_captions(shot_name)
-        captions[asset_type] = caption or ''
-        try:
-            import json
-            with self._captions_file(shot_name).open('w', encoding='utf-8') as f:
-                json.dump(captions, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            raise ValueError(f"Failed to save caption: {str(e)}")
-
-    def _prompt_file_path(self, shot_name, asset_type, version):
-        """Return the path to the prompt file for a specific asset version."""
-        shot_dir = self.wip_dir / shot_name
-        if asset_type in {'image', 'first_image'}:
-            base_dir = shot_dir / 'images'
-            if asset_type == 'image':
-                filename = f'{shot_name}_v{version:03d}_image_prompt.txt'
-            else:
-                filename = f'{shot_name}_first_v{version:03d}_image_prompt.txt'
-        elif asset_type == 'last_image':
-            base_dir = shot_dir / 'images'
-            filename = f'{shot_name}_last_v{version:03d}_image_prompt.txt'
-        elif asset_type == 'video':
-            base_dir = shot_dir / 'videos'
-            filename = f'{shot_name}_v{version:03d}_video_prompt.txt'
-        elif asset_type == 'alt_video':
-            base_dir = shot_dir / 'videos'
-            filename = f'{shot_name}_alt_v{version:03d}_video_prompt.txt'
-        elif asset_type == 'audio':
-            base_dir = shot_dir / 'audio'
-            filename = f'{shot_name}_audio_v{version:03d}_audio_prompt.txt'
-        else:
-            raise ValueError('Invalid asset type')
-        return base_dir / filename
-
-    def load_prompt(self, shot_name, asset_type, version):
-        path = self._prompt_file_path(shot_name, asset_type, version)
-        if path.exists():
-            try:
-                with open(path, encoding='utf-8') as f:
-                    return f.read().strip()
-            except Exception:
-                return ''
-        # Backward-compatibility: if first_image not found, try legacy 'image'
-        if asset_type == 'first_image':
-            legacy_path = self._prompt_file_path(shot_name, 'image', version)
-            if legacy_path.exists():
-                try:
-                    with open(legacy_path, encoding='utf-8') as f:
-                        return f.read().strip()
-                except Exception:
-                    return ''
-        return ''
-
-    def save_prompt(self, shot_name, asset_type, version, prompt):
-        """Save prompt for a specific asset version."""
-        validate_shot_name(shot_name)
-        path = self._prompt_file_path(shot_name, asset_type, version)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            with open(path, 'w', encoding='utf-8') as f:
-                f.write(prompt)
-        except Exception as e:
-            raise ValueError(f"Failed to save prompt: {str(e)}")
-
-    def get_prompt_versions(self, shot_name, asset_type):
-        """Return a sorted list of prompt versions for the given asset."""
-        shot_dir = self.wip_dir / shot_name
-
-        patterns = []
-        base_dir = None
-        if asset_type in {'image', 'first_image'}:
-            base_dir = shot_dir / 'images'
-            patterns = [
-                f'{shot_name}_v*_image_prompt.txt',          # legacy
-                f'{shot_name}_first_v*_image_prompt.txt'     # new first
-            ]
-        elif asset_type == 'last_image':
-            base_dir = shot_dir / 'images'
-            patterns = [f'{shot_name}_last_v*_image_prompt.txt']
-        elif asset_type == 'video':
-            base_dir = shot_dir / 'videos'
-            patterns = [f'{shot_name}_v*_video_prompt.txt']
-        elif asset_type == 'alt_video':
-            base_dir = shot_dir / 'videos'
-            patterns = [f'{shot_name}_alt_v*_video_prompt.txt']
-        elif asset_type == 'audio':
-            base_dir = shot_dir / 'audio'
-            patterns = [f'{shot_name}_audio_v*_audio_prompt.txt']
-        else:
-            raise ValueError('Invalid asset type')
-
-        versions = set()
-        if base_dir and base_dir.exists():
-            for pattern in patterns:
-                for f in base_dir.glob(pattern):
-                    stem = f.stem
-                    if '_v' not in stem:
-                        continue
-                    try:
-                        part = stem.split('_v')[1]
-                        ver_str = part.split('_')[0]
-                        versions.add(int(ver_str))
-                    except (IndexError, ValueError):
-                        continue
-        return sorted(versions)
+        Returns the URL path that the thumbnail *would* have, based solely on
+        the source asset stem and shot name.  Actual generation is deferred to
+        the first request through ``/api/shots/thumbnail/``.
+        """
+        if not asset_path:
+            return None
+        p = Path(asset_path)
+        suffix = "_vthumb" if is_video else "_thumb"
+        return f"/api/shots/thumbnail/{shot_name}_{p.stem}{suffix}.jpg"
 
     def _generate_thumbnail_on_demand(self, thumb_filename):
         """Ensure a thumbnail exists and is fresh.
@@ -1197,261 +846,189 @@ class ShotManager:
 
         return f"/api/shots/thumbnail/{thumb_filename}"
 
-    def export_latest_assets(self, export_name=None, export_type='all', include_display_in_filename=True, include_metadata=True, export_format='md'):
-        """Export latest assets for non-archived shots in custom order."""
-        import re
-        import shutil
-        from datetime import datetime
+    # ==================================================================
+    # get_shot_info — the main info builder (orchestrates all sub-services)
+    # ==================================================================
 
-        # Get non-archived shots in order
-        non_archived_shots = [s for s in self.get_shots() if not s['archived']]
-        if not non_archived_shots:
-            raise ValueError("No non-archived shots found")
+    def get_shot_info(self, shot_name, archived_names=None):
+        """Get information about a specific shot."""
+        validate_shot_name(shot_name)
+        shot_dir = self.wip_dir / shot_name
 
-        # Load project information
-        project_manager = ProjectManager()
-        project_info = project_manager.load_project_info(self.project_path)
+        # Load notes (delegated to metadata service)
+        notes = self.metadata.load_notes(shot_name)
 
-        # Create export directory
-        exports_root = self.project_path / 'exports'
-        exports_root.mkdir(exist_ok=True)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        export_dir_name = export_name or f'export_{timestamp}'
-        export_dir = exports_root / export_dir_name
-        export_dir.mkdir(exist_ok=True)
+        # First/Last images
+        # New naming for first frame
+        first_image_path, first_max_version = self._get_latest_asset(
+            self.latest_images_dir, shot_dir / 'images',
+            f'{shot_name}_first', ALLOWED_IMAGE_EXTENSIONS
+        )
+        # Only fall back to legacy naming if modern '_first' naming found nothing
+        if not first_image_path and first_max_version == 0:
+            legacy_image_path, legacy_max_version = self._get_latest_asset(
+                self.latest_images_dir, shot_dir / 'images',
+                shot_name, ALLOWED_IMAGE_EXTENSIONS
+            )
+            if legacy_image_path or legacy_max_version > 0:
+                first_image_path = legacy_image_path
+                first_max_version = legacy_max_version
 
-        # Sanitize filename helper
-        def sanitize_filename(name):
-            return re.sub(r'[<>:\"/\\|?*]', '_', str(name))[:50] or ''
+        # New naming for last frame
+        last_image_path, last_max_version = self._get_latest_asset(
+            self.latest_images_dir, shot_dir / 'images',
+            f'{shot_name}_last', ALLOWED_IMAGE_EXTENSIONS
+        )
 
-        # Process each shot in order (copy asset files)
-        for order, shot in enumerate(non_archived_shots, start=1):
-            shot_name = shot['name']
-            display_name = shot['display_name'] or ''
-            display_suffix = f"_{sanitize_filename(display_name)}" if include_display_in_filename and display_name else ''
-
-            # Get shot info
-            info = self.get_shot_info(shot_name)
-
-            # Images
-            if 'images' in export_type or export_type == 'all':
-                images_dir = export_dir / 'images'
-                images_dir.mkdir(exist_ok=True)
-
-                # First image
-                if info['first_image']['file']:
-                    src = Path(info['first_image']['file'])
-                    if src.exists():
-                        ext = src.suffix
-                        dst = images_dir / f"{order:03d}_{shot_name}{display_suffix}_first{ext}"
-                        shutil.copy2(src, dst)
-
-                # Last image
-                if info['last_image']['file']:
-                    src = Path(info['last_image']['file'])
-                    if src.exists():
-                        ext = src.suffix
-                        dst = images_dir / f"{order:03d}_{shot_name}{display_suffix}_last{ext}"
-                        shutil.copy2(src, dst)
-
-            # Videos
-            if 'videos' in export_type or export_type == 'all':
-                videos_dir = export_dir / 'videos'
-                videos_dir.mkdir(exist_ok=True)
-
-                if info['video']['file']:
-                    src = Path(info['video']['file'])
-                    if src.exists():
-                        ext = src.suffix
-                        dst = videos_dir / f"{order:03d}_{shot_name}{display_suffix}{ext}"
-                        shutil.copy2(src, dst)
-
-                if info['alt_video']['file']:
-                    src = Path(info['alt_video']['file'])
-                    if src.exists():
-                        ext = src.suffix
-                        dst = videos_dir / f"{order:03d}_{shot_name}{display_suffix}_alt{ext}"
-                        shutil.copy2(src, dst)
-
-            # Audio
-            if 'audio' in export_type or export_type == 'all':
-                audio_dir = export_dir / 'audio'
-                audio_dir.mkdir(exist_ok=True)
-
-                if info['audio']['file']:
-                    src = Path(info['audio']['file'])
-                    if src.exists():
-                        ext = src.suffix
-                        dst = audio_dir / f"{order:03d}_{shot_name}{display_suffix}_audio{ext}"
-                        shutil.copy2(src, dst)
-
-        # Generate metadata if requested
-        if include_metadata:
-            if export_format == 'html':
-                self._write_html_export(export_dir, non_archived_shots, project_info, export_type, timestamp)
+        # Detect existing versions if max_version seems inaccurate (cached per ShotManager instance)
+        if first_max_version == 0:
+            cache_key = (shot_name, 'first_image')
+            if cache_key in self._version_scan_cache:
+                detected_first_versions = self._version_scan_cache[cache_key]
             else:
-                self._write_md_export(export_dir, non_archived_shots, project_info, export_type, timestamp)
+                detected_first_versions = self._detect_existing_versions(shot_name, 'first_image')
+                self._version_scan_cache[cache_key] = detected_first_versions
+            first_max_version = max(first_max_version, detected_first_versions)
 
-        return str(export_dir)
+        if last_max_version == 0:
+            cache_key = (shot_name, 'last_image')
+            if cache_key in self._version_scan_cache:
+                detected_last_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_last_versions = self._detect_existing_versions(shot_name, 'last_image')
+                self._version_scan_cache[cache_key] = detected_last_versions
+            last_max_version = max(last_max_version, detected_last_versions)
 
-    def _write_md_export(self, export_dir, non_archived_shots, project_info, export_type, timestamp):
-        """Write markdown export summary."""
-        # Collect data for tables and notes
-        first_data = []
-        last_data = []
-        video_data = []
-        alt_video_data = []
-        audio_data = []
-        notes_list = []
+        first_image_path = self._normalize_path(first_image_path)
+        last_image_path = self._normalize_path(last_image_path)
 
-        for order, shot in enumerate(non_archived_shots, start=1):
-            shot_name = shot['name']
-            display_name = shot['display_name'] or ''
-            info = self.get_shot_info(shot_name)
+        current_first_version = self.get_current_version(shot_name, 'first_image', first_max_version)
+        first_prompt = self.prompts.load_prompt(shot_name, 'first_image', current_first_version) if current_first_version > 0 else ''
 
-            # First Frame
-            if ('images' in export_type or export_type == 'all') and (info['first_image']['caption'] or info['first_image']['prompt']):
-                first_data.append((order, shot_name, display_name, info['first_image']['caption'], info['first_image']['prompt']))
+        current_last_version = self.get_current_version(shot_name, 'last_image', last_max_version)
+        last_prompt = self.prompts.load_prompt(shot_name, 'last_image', current_last_version) if current_last_version > 0 else ''
 
-            # Last Frame
-            if ('images' in export_type or export_type == 'all') and (info['last_image']['caption'] or info['last_image']['prompt']):
-                last_data.append((order, shot_name, display_name, info['last_image']['caption'], info['last_image']['prompt']))
+        # Latest video
+        latest_video, max_video_version = self._get_latest_asset(
+            self.latest_videos_dir, shot_dir / 'videos',
+            shot_name, ALLOWED_VIDEO_EXTENSIONS
+        )
+        
+        # Detect existing video versions if max_version seems inaccurate (cached per ShotManager instance)
+        if max_video_version == 0:
+            cache_key = (shot_name, 'video')
+            if cache_key in self._version_scan_cache:
+                detected_video_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_video_versions = self._detect_existing_versions(shot_name, 'video')
+                self._version_scan_cache[cache_key] = detected_video_versions
+            max_video_version = max(max_video_version, detected_video_versions)
+            
+        latest_video = self._normalize_path(latest_video)
+        current_video_version = self.get_current_version(shot_name, 'video', max_video_version)
+        video_prompt = ''
+        if current_video_version > 0:
+            video_prompt = self.prompts.load_prompt(shot_name, 'video', current_video_version)
 
-            # Video
-            if ('videos' in export_type or export_type == 'all') and (info['video']['caption'] or info['video']['prompt']):
-                video_data.append((order, shot_name, display_name, info['video']['caption'], info['video']['prompt']))
+        # Alt video
+        latest_alt_video, max_alt_video_version = self._get_latest_asset(
+            self.latest_videos_dir, shot_dir / 'videos',
+            f'{shot_name}_alt', ALLOWED_VIDEO_EXTENSIONS
+        )
+        
+        if max_alt_video_version == 0:
+            cache_key = (shot_name, 'alt_video')
+            if cache_key in self._version_scan_cache:
+                detected_alt_video_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_alt_video_versions = self._detect_existing_versions(shot_name, 'alt_video')
+                self._version_scan_cache[cache_key] = detected_alt_video_versions
+            max_alt_video_version = max(max_alt_video_version, detected_alt_video_versions)
+            
+        latest_alt_video = self._normalize_path(latest_alt_video)
+        current_alt_video_version = self.get_current_version(shot_name, 'alt_video', max_alt_video_version)
+        alt_video_prompt = ''
+        if current_alt_video_version > 0:
+            alt_video_prompt = self.prompts.load_prompt(shot_name, 'alt_video', current_alt_video_version)
 
-            # Alt Video
-            if ('videos' in export_type or export_type == 'all') and (info['alt_video']['caption'] or info['alt_video']['prompt']):
-                alt_video_data.append((order, shot_name, display_name, info['alt_video']['caption'], info['alt_video']['prompt']))
+        # Thumbnails — lazy: compute URL path only; generation deferred to first browser request
+        first_thumb = self._thumbnail_url(first_image_path, shot_name, is_video=False) if first_image_path else None
+        last_thumb = self._thumbnail_url(last_image_path, shot_name, is_video=False) if last_image_path else None
+        video_thumb = self._thumbnail_url(latest_video, shot_name, is_video=True) if latest_video else None
+        alt_video_thumb = self._thumbnail_url(latest_alt_video, f"{shot_name}_alt", is_video=True) if latest_alt_video else None
 
-            # Audio
-            if ('audio' in export_type or export_type == 'all') and (info['audio']['caption'] or info['audio']['prompt']):
-                audio_data.append((order, shot_name, display_name, info['audio']['caption'], info['audio']['prompt']))
+        # Audio
+        latest_audio, max_audio_version = self._get_latest_asset(
+            self.latest_audio_dir, shot_dir / 'audio',
+            f'{shot_name}_audio', ALLOWED_AUDIO_EXTENSIONS
+        )
 
-            # Notes
-            if info['notes'].strip():
-                notes_list.append((order, shot_name, display_name, info['notes']))
+        if max_audio_version == 0:
+            cache_key = (shot_name, 'audio')
+            if cache_key in self._version_scan_cache:
+                detected_audio_versions = self._version_scan_cache[cache_key]
+            else:
+                detected_audio_versions = self._detect_existing_versions(shot_name, 'audio')
+                self._version_scan_cache[cache_key] = detected_audio_versions
+            max_audio_version = max(max_audio_version, detected_audio_versions)
 
-        # Build MD content
-        md_lines = [
-            f"# {project_info.get('title', self.project_path.name)}",
-            "",
-            "## Project Information",
-        ]
+        latest_audio = self._normalize_path(latest_audio)
+        current_audio_version = self.get_current_version(shot_name, 'audio', max_audio_version)
+        audio_prompt = ''
+        if current_audio_version > 0:
+            audio_prompt = self.prompts.load_prompt(shot_name, 'audio', current_audio_version)
 
-        # Add bullet points for non-empty project fields
-        if project_info.get('short_description'):
-            md_lines.append(f"- **Short Description:** {project_info.get('short_description')}")
+        captions = self.metadata.load_captions(shot_name)
 
-        if project_info.get('notes'):
-            md_lines.append(f"- **Project Notes:** {project_info.get('notes')}")
+        # Compose response with backward-compatible 'image' alias pointing to first_image
+        first_image_dict = {
+            'file': first_image_path,
+            'current_version': current_first_version,
+            'max_version': first_max_version,
+            'thumbnail': first_thumb,
+            'prompt': first_prompt,
+            'caption': captions.get('first_image', ''),
+        }
+        last_image_dict = {
+            'file': last_image_path,
+            'current_version': current_last_version,
+            'max_version': last_max_version,
+            'thumbnail': last_thumb,
+            'prompt': last_prompt,
+            'caption': captions.get('last_image', ''),
+        }
 
-        if project_info.get('tags'):
-            md_lines.append(f"- **Tags:** {', '.join(project_info.get('tags'))}")
-
-        md_lines.extend([
-            "",
-            f"**Export Date:** {timestamp}",
-            f"**Export Type:** {export_type}",
-            ""
-        ])
-
-        # First Frame table
-        if first_data:
-            md_lines.extend([
-                "## First Frame",
-                "| Order | Shot Name | Display Name | Captions | Prompts |",
-                "|-------|-----------|--------------|----------|---------|"
-            ])
-            for order, name, display_name, caption, prompt in first_data:
-                md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
-            md_lines.append("")
-
-        # Last Frame table
-        if last_data:
-            md_lines.extend([
-                "## Last Frame",
-                "| Order | Shot Name | Display Name | Captions | Prompts |",
-                "|-------|-----------|--------------|----------|---------|"
-            ])
-            for order, name, display_name, caption, prompt in last_data:
-                md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
-            md_lines.append("")
-
-        # Video table
-        if video_data:
-            md_lines.extend([
-                "## Video",
-                "| Order | Shot Name | Display Name | Captions | Prompts |",
-                "|-------|-----------|--------------|----------|---------|"
-            ])
-            for order, name, display_name, caption, prompt in video_data:
-                md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
-            md_lines.append("")
-
-        # Alt Video table
-        if alt_video_data:
-            md_lines.extend([
-                "## Alt Video",
-                "| Order | Shot Name | Display Name | Captions | Prompts |",
-                "|-------|-----------|--------------|----------|---------|"
-            ])
-            for order, name, display_name, caption, prompt in alt_video_data:
-                md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
-            md_lines.append("")
-
-        # Audio table
-        if audio_data:
-            md_lines.extend([
-                "## Audio",
-                "| Order | Shot Name | Display Name | Captions | Prompts |",
-                "|-------|-----------|--------------|----------|---------|"
-            ])
-            for order, name, display_name, caption, prompt in audio_data:
-                md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
-            md_lines.append("")
-
-        # Notes table
-        if notes_list:
-            md_lines.extend([
-                "## Notes",
-                "| Order | Shot Name | Display Name | Notes |",
-                "|-------|-----------|--------------|-------|"
-            ])
-            for order, name, display_name, notes in notes_list:
-                md_lines.append(f"| {order:03d} | {name} | {display_name} | {notes.replace('|', '\\|').replace('\n', '<br>')} |")
-            md_lines.append("")
-
-        # Write MD file
-        md_path = export_dir / "export_summary.md"
-        with open(md_path, 'w', encoding='utf-8') as f:
-            f.write('\n'.join(md_lines))
-
-    def _write_html_export(self, export_dir, non_archived_shots, project_info, export_type, timestamp):
-        """Write HTML export — delegates to ``html_exporter`` module."""
-        from app.services.html_exporter import write_html_export as _do_export
-        _do_export(self, export_dir, non_archived_shots, project_info, export_type, timestamp)
-
-def get_shot_manager(project_path, cache=None):
-    """Retrieve a cached ``ShotManager`` for the given path."""
-    from flask import current_app
-
-    if cache is None:
-        cache = current_app.config.setdefault('SHOT_MANAGER_CACHE', {})
-
-    path_key = str(Path(project_path).resolve())
-    if path_key not in cache:
-        cache[path_key] = ShotManager(path_key)
-    return cache[path_key]
-
-
-def clear_shot_manager_cache(cache=None):
-    """Clear cached ``ShotManager`` instances."""
-    from flask import current_app
-
-    if cache is None:
-        cache = current_app.config.get('SHOT_MANAGER_CACHE')
-
-    if cache is not None:
-        cache.clear()
+        meta = self.metadata.load_meta(shot_name)
+        return {
+            'name': shot_name,
+            'display_name': meta.get('display_name', ''),
+            'notes': notes,
+            'first_image': first_image_dict,
+            'last_image': last_image_dict,
+            'image': first_image_dict,  # backward compatibility
+            'video': {
+                'file': latest_video,
+                'current_version': current_video_version,
+                'max_version': max_video_version,
+                'thumbnail': video_thumb,
+                'prompt': video_prompt,
+                'caption': captions.get('video', ''),
+            },
+            'alt_video': {
+                'file': latest_alt_video,
+                'current_version': current_alt_video_version,
+                'max_version': max_alt_video_version,
+                'thumbnail': alt_video_thumb,
+                'prompt': alt_video_prompt,
+                'caption': captions.get('alt_video', ''),
+            },
+            'audio': {
+                'file': latest_audio,
+                'current_version': current_audio_version,
+                'max_version': max_audio_version,
+                'thumbnail': None,  # Audio has no visual thumbnail
+                'prompt': audio_prompt,
+                'caption': captions.get('audio', ''),
+            },
+            'archived': (shot_name in (archived_names if archived_names is not None else self.order.load_archived()))
+        }

@@ -6,7 +6,7 @@ from pathlib import Path
 from flask import Blueprint, current_app, jsonify, render_template, request
 
 from app.config.constants import MAX_RECENT_PROJECTS
-from app.services.shot_manager import clear_shot_manager_cache, get_shot_manager
+from app.services.shot_utils import clear_shot_manager_cache, get_shot_manager
 from app.utils import get_app_version
 
 logger = logging.getLogger(__name__)
