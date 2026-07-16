@@ -166,8 +166,6 @@ body {
   border-radius: 10px;
   padding: 28px 24px;
   margin-bottom: 32px;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 500px;
 }
 
 .sb-shot-heading {

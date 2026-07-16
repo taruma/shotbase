@@ -11,7 +11,7 @@ This minor release introduces a self-contained HTML gallery export with sidebar 
   - Markdown-rendered project notes (bold, italic, code, lists, headings, fenced code)
   - Styled tag pills replacing comma-separated tags
   - Meta card with badges for version, shot count, export date, created, and updated timestamps
-  - Lazy-loaded images (`loading="lazy"`, `decoding="async"`) and `content-visibility: auto` on shot cards for faster rendering
+  - Lazy-loaded images (`loading="lazy"`, `decoding="async"`) on shot cards for faster rendering
   The export format is selected via the new `export_format` parameter on the existing export endpoint. HTML generation logic lives in a dedicated `app/services/html_exporter.py` module, extracted from `ShotManager` for single-responsibility adherence.
 - **Prompt Tooltip Middle Truncation**: Long prompts in thumbnail tooltips now truncate with a styled scissors-emoji separator (── ✂ ──) when they exceed 750 characters. The new `truncateMiddle()` function breaks on word boundaries and preserves readable beginning and end portions. Tooltip CSS also updated to `pre-line` to preserve newline formatting.
 - **Zebra Striping on Shot Rows**: Alternating background colors on even-indexed shot rows (`.even` class added in `renderShots()`) improve visual distinction between entries in the shot grid. Styled for both dark and light themes with appropriate hover states.
@@ -21,6 +21,7 @@ This minor release introduces a self-contained HTML gallery export with sidebar 
 - **Recent Projects Grid Width**: The setup screen's recent project grid container (`.recent-projects-grid`) is now capped at `max-width: 700px` for a more centered, readable layout.
 
 ### Fixed
+- **Edge Video Playback Unresponsive**: Removed `content-visibility: auto` from `.sb-shot` cards in the HTML export CSS. The CSS containment property caused `<video>` controls in off-screen shot cards to skip initialization in Microsoft Edge, requiring repeated clicks to become responsive. Chrome was less affected. The lazy-loading images alone provide sufficient performance for large exports.
 - **Scroll Position on Setup Transition**: Added `window.scrollTo(0,0)` in `showMainInterface()` to reset scroll position when transitioning from the setup screen, preventing the page from appearing scrolled-down after project load.
 - **Prompt Version Validation & JSON Error Standardization**: The prompt save endpoint now validates the `version` parameter as an integer and returns a 400 error if invalid. All error responses across thumbnail serving, video/image/audio serving, and prompt saving have been standardized from plain-text strings to structured `{"success": false, "error": "..."}` JSON with proper HTTP status codes.
 
