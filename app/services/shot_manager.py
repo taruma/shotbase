@@ -1646,7 +1646,7 @@ class ShotManager:
                     src = Path(info['first_image']['file'])
                     ext = src.suffix
                     first_rel = f"images/{order:03d}_{name}{display_suffix}_first{ext}"
-                    lines.append(f'<a href="{first_rel}" target="_blank"><img src="{first_rel}" alt="First frame" class="sb-img"></a>')
+                    lines.append(f'<a href="{first_rel}" target="_blank"><img src="{first_rel}" alt="First frame" class="sb-img" loading="lazy" decoding="async"></a>')
                 if info['first_image'].get('caption'):
                     lines.append(f'<p class="sb-caption"><strong>Caption:</strong> {esc(info["first_image"]["caption"])}</p>')
                 if info['first_image'].get('prompt'):
@@ -1660,7 +1660,7 @@ class ShotManager:
                     src = Path(info['last_image']['file'])
                     ext = src.suffix
                     last_rel = f"images/{order:03d}_{name}{display_suffix}_last{ext}"
-                    lines.append(f'<a href="{last_rel}" target="_blank"><img src="{last_rel}" alt="Last frame" class="sb-img"></a>')
+                    lines.append(f'<a href="{last_rel}" target="_blank"><img src="{last_rel}" alt="Last frame" class="sb-img" loading="lazy" decoding="async"></a>')
                 if info['last_image'].get('caption'):
                     lines.append(f'<p class="sb-caption"><strong>Caption:</strong> {esc(info["last_image"]["caption"])}</p>')
                 if info['last_image'].get('prompt'):
@@ -1933,6 +1933,8 @@ body {
   border-radius: 10px;
   padding: 28px 24px;
   margin-bottom: 32px;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 500px;
 }
 
 .sb-shot-heading {
