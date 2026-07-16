@@ -1,5 +1,40 @@
 # Changelog
 
+## v4.2.0 (July 16, 2026) - by Taruma Sakti
+
+This minor release introduces a self-contained HTML gallery export with sidebar navigation, copy-to-clipboard buttons, Markdown-rendered project notes, styled tag pills, and a meta card. The CSS codebase has been modularized into five focused files, and the light-theme class has been migrated from `body.light-theme` to `.light`. Several UI polish items and fixes round out the release.
+
+### Added
+- **HTML Gallery Export**: New `html` export format alongside the existing Markdown default. The self-contained HTML page includes:
+  - Fixed sidebar TOC with anchor-link navigation
+  - Copy-to-clipboard buttons on all prompt blocks
+  - Markdown-rendered project notes (bold, italic, code, lists, headings, fenced code)
+  - Styled tag pills replacing comma-separated tags
+  - Meta card with badges for version, shot count, export date, created, and updated timestamps
+  - Lazy-loaded images (`loading="lazy"`, `decoding="async"`) and `content-visibility: auto` on shot cards for faster rendering
+  The export format is selected via the new `export_format` parameter on the existing export endpoint. HTML generation logic lives in a dedicated `app/services/html_exporter.py` module, extracted from `ShotManager` for single-responsibility adherence.
+- **Prompt Tooltip Middle Truncation**: Long prompts in thumbnail tooltips now truncate with a styled scissors-emoji separator (── ✂ ──) when they exceed 750 characters. The new `truncateMiddle()` function breaks on word boundaries and preserves readable beginning and end portions. Tooltip CSS also updated to `pre-line` to preserve newline formatting.
+- **Zebra Striping on Shot Rows**: Alternating background colors on even-indexed shot rows (`.even` class added in `renderShots()`) improve visual distinction between entries in the shot grid. Styled for both dark and light themes with appropriate hover states.
+- **Recent Project Card Transitions**: Smooth `background`, `border-color`, and `transform` transitions on hover (`translateY(-1px)`) and active (`translateY(0)`) states for recent project items, with light-theme overrides.
+
+### Changed
+- **Recent Projects Grid Width**: The setup screen's recent project grid container (`.recent-projects-grid`) is now capped at `max-width: 700px` for a more centered, readable layout.
+
+### Fixed
+- **Scroll Position on Setup Transition**: Added `window.scrollTo(0,0)` in `showMainInterface()` to reset scroll position when transitioning from the setup screen, preventing the page from appearing scrolled-down after project load.
+- **Prompt Version Validation & JSON Error Standardization**: The prompt save endpoint now validates the `version` parameter as an integer and returns a 400 error if invalid. All error responses across thumbnail serving, video/image/audio serving, and prompt saving have been standardized from plain-text strings to structured `{"success": false, "error": "..."}` JSON with proper HTTP status codes.
+
+### Refactored
+- **Modular CSS Architecture**: The monolithic CSS has been split into five focused modules — `core.css` (reset, buttons, forms), `layout.css` (header, TOC, setup, footer), `shot-grid.css` (grid, rows, thumbnails, drag-and-drop), `modals.css` (all modal styles), and `main.css` (remaining primary styles). Light theme overrides were consolidated in `styles.css`. As part of this refactor, the theme class was migrated from `body.light-theme` to `.light` in `search-modal.css`, and missing focus styles (`.notes-input`, `.asset-caption-input`, `.toc-filter`) and hover styles (`.drop-zone.empty`) were added to the light theme.
+
+### Documentation
+- **AGENTS.md Updated**: Documented the new HTML gallery export feature (endpoint parameter, `html_exporter.py` module, side effects), the modular CSS file structure (file responsibilities, line counts, load order), and bumped the project version to 4.2.0.
+
+### AI Development Attribution
+This release was developed with AI assistance using Deepseek V4 pro with Cline in Plan and Act mode. All generated changes were manually reviewed, tested, and refined by the maintainer, Taruma Sakti, to ensure quality and alignment with project goals.
+
+This version enhances export capabilities with a polished HTML gallery and improves CSS maintainability through modularization.
+
 ## v4.1.0 (July 4, 2026) - by Taruma Sakti
 
 ### Added
