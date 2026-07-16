@@ -499,9 +499,13 @@ def export_latest_assets():
         export_type = data.get("export_type", "all")
         include_display_in_filename = data.get("include_display_in_filename", True)
         include_metadata = data.get("include_metadata", True)
+        export_format = data.get("export_format", "md")
 
         if export_type not in ['images', 'videos', 'audio', 'all']:
             return jsonify({"success": False, "error": "Invalid export_type"}), 400
+
+        if export_format not in ['md', 'html']:
+            return jsonify({"success": False, "error": "Invalid export_format"}), 400
 
         project_manager = current_app.config['PROJECT_MANAGER']
         project = project_manager.get_current_project()
@@ -513,7 +517,8 @@ def export_latest_assets():
             export_name=export_name,
             export_type=export_type,
             include_display_in_filename=include_display_in_filename,
-            include_metadata=include_metadata
+            include_metadata=include_metadata,
+            export_format=export_format,
         )
 
         return jsonify({"success": True, "export_path": export_path})

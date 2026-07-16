@@ -1197,7 +1197,7 @@ class ShotManager:
 
         return f"/api/shots/thumbnail/{thumb_filename}"
 
-    def export_latest_assets(self, export_name=None, export_type='all', include_display_in_filename=True, include_metadata=True):
+    def export_latest_assets(self, export_name=None, export_type='all', include_display_in_filename=True, include_metadata=True, export_format='md'):
         """Export latest assets for non-archived shots in custom order."""
         import re
         import shutil
@@ -1224,7 +1224,7 @@ class ShotManager:
         def sanitize_filename(name):
             return re.sub(r'[<>:\"/\\|?*]', '_', str(name))[:50] or ''
 
-        # Process each shot in order
+        # Process each shot in order (copy asset files)
         for order, shot in enumerate(non_archived_shots, start=1):
             shot_name = shot['name']
             display_name = shot['display_name'] or ''
@@ -1287,139 +1287,151 @@ class ShotManager:
 
         # Generate metadata if requested
         if include_metadata:
-            # Collect data for tables and notes
-            first_data = []
-            last_data = []
-            video_data = []
-            alt_video_data = []
-            audio_data = []
-            notes_list = []
-
-            for order, shot in enumerate(non_archived_shots, start=1):
-                shot_name = shot['name']
-                display_name = shot['display_name'] or ''
-                info = self.get_shot_info(shot_name)
-
-                # First Frame
-                if ('images' in export_type or export_type == 'all') and (info['first_image']['caption'] or info['first_image']['prompt']):
-                    first_data.append((order, shot_name, display_name, info['first_image']['caption'], info['first_image']['prompt']))
-
-                # Last Frame
-                if ('images' in export_type or export_type == 'all') and (info['last_image']['caption'] or info['last_image']['prompt']):
-                    last_data.append((order, shot_name, display_name, info['last_image']['caption'], info['last_image']['prompt']))
-
-                # Video
-                if ('videos' in export_type or export_type == 'all') and (info['video']['caption'] or info['video']['prompt']):
-                    video_data.append((order, shot_name, display_name, info['video']['caption'], info['video']['prompt']))
-
-                # Alt Video
-                if ('videos' in export_type or export_type == 'all') and (info['alt_video']['caption'] or info['alt_video']['prompt']):
-                    alt_video_data.append((order, shot_name, display_name, info['alt_video']['caption'], info['alt_video']['prompt']))
-
-                # Audio
-                if ('audio' in export_type or export_type == 'all') and (info['audio']['caption'] or info['audio']['prompt']):
-                    audio_data.append((order, shot_name, display_name, info['audio']['caption'], info['audio']['prompt']))
-
-                # Notes
-                if info['notes'].strip():
-                    notes_list.append((order, shot_name, display_name, info['notes']))
-
-            # Build MD content
-            md_lines = [
-                f"# {project_info.get('title', self.project_path.name)}",
-                "",
-                "## Project Information",
-            ]
-
-            # Add bullet points for non-empty project fields
-            if project_info.get('short_description'):
-                md_lines.append(f"- **Short Description:** {project_info.get('short_description')}")
-
-            if project_info.get('notes'):
-                md_lines.append(f"- **Project Notes:** {project_info.get('notes')}")
-
-            if project_info.get('tags'):
-                md_lines.append(f"- **Tags:** {', '.join(project_info.get('tags'))}")
-
-            md_lines.extend([
-                "",
-                f"**Export Date:** {timestamp}",
-                f"**Export Type:** {export_type}",
-                ""
-            ])
-
-            # First Frame table
-            if first_data:
-                md_lines.extend([
-                    "## First Frame",
-                    "| Order | Shot Name | Display Name | Captions | Prompts |",
-                    "|-------|-----------|--------------|----------|---------|"
-                ])
-                for order, name, display_name, caption, prompt in first_data:
-                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
-                md_lines.append("")
-
-            # Last Frame table
-            if last_data:
-                md_lines.extend([
-                    "## Last Frame",
-                    "| Order | Shot Name | Display Name | Captions | Prompts |",
-                    "|-------|-----------|--------------|----------|---------|"
-                ])
-                for order, name, display_name, caption, prompt in last_data:
-                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
-                md_lines.append("")
-
-            # Video table
-            if video_data:
-                md_lines.extend([
-                    "## Video",
-                    "| Order | Shot Name | Display Name | Captions | Prompts |",
-                    "|-------|-----------|--------------|----------|---------|"
-                ])
-                for order, name, display_name, caption, prompt in video_data:
-                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
-                md_lines.append("")
-
-            # Alt Video table
-            if alt_video_data:
-                md_lines.extend([
-                    "## Alt Video",
-                    "| Order | Shot Name | Display Name | Captions | Prompts |",
-                    "|-------|-----------|--------------|----------|---------|"
-                ])
-                for order, name, display_name, caption, prompt in alt_video_data:
-                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
-                md_lines.append("")
-
-            # Audio table
-            if audio_data:
-                md_lines.extend([
-                    "## Audio",
-                    "| Order | Shot Name | Display Name | Captions | Prompts |",
-                    "|-------|-----------|--------------|----------|---------|"
-                ])
-                for order, name, display_name, caption, prompt in audio_data:
-                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
-                md_lines.append("")
-
-            # Notes table
-            if notes_list:
-                md_lines.extend([
-                    "## Notes",
-                    "| Order | Shot Name | Display Name | Notes |",
-                    "|-------|-----------|--------------|-------|"
-                ])
-                for order, name, display_name, notes in notes_list:
-                    md_lines.append(f"| {order:03d} | {name} | {display_name} | {notes.replace('|', '\\|').replace('\n', '<br>')} |")
-                md_lines.append("")
-
-            # Write MD file
-            md_path = export_dir / "export_summary.md"
-            with open(md_path, 'w', encoding='utf-8') as f:
-                f.write('\n'.join(md_lines))
+            if export_format == 'html':
+                self._write_html_export(export_dir, non_archived_shots, project_info, export_type, timestamp)
+            else:
+                self._write_md_export(export_dir, non_archived_shots, project_info, export_type, timestamp)
 
         return str(export_dir)
+
+    def _write_md_export(self, export_dir, non_archived_shots, project_info, export_type, timestamp):
+        """Write markdown export summary."""
+        # Collect data for tables and notes
+        first_data = []
+        last_data = []
+        video_data = []
+        alt_video_data = []
+        audio_data = []
+        notes_list = []
+
+        for order, shot in enumerate(non_archived_shots, start=1):
+            shot_name = shot['name']
+            display_name = shot['display_name'] or ''
+            info = self.get_shot_info(shot_name)
+
+            # First Frame
+            if ('images' in export_type or export_type == 'all') and (info['first_image']['caption'] or info['first_image']['prompt']):
+                first_data.append((order, shot_name, display_name, info['first_image']['caption'], info['first_image']['prompt']))
+
+            # Last Frame
+            if ('images' in export_type or export_type == 'all') and (info['last_image']['caption'] or info['last_image']['prompt']):
+                last_data.append((order, shot_name, display_name, info['last_image']['caption'], info['last_image']['prompt']))
+
+            # Video
+            if ('videos' in export_type or export_type == 'all') and (info['video']['caption'] or info['video']['prompt']):
+                video_data.append((order, shot_name, display_name, info['video']['caption'], info['video']['prompt']))
+
+            # Alt Video
+            if ('videos' in export_type or export_type == 'all') and (info['alt_video']['caption'] or info['alt_video']['prompt']):
+                alt_video_data.append((order, shot_name, display_name, info['alt_video']['caption'], info['alt_video']['prompt']))
+
+            # Audio
+            if ('audio' in export_type or export_type == 'all') and (info['audio']['caption'] or info['audio']['prompt']):
+                audio_data.append((order, shot_name, display_name, info['audio']['caption'], info['audio']['prompt']))
+
+            # Notes
+            if info['notes'].strip():
+                notes_list.append((order, shot_name, display_name, info['notes']))
+
+        # Build MD content
+        md_lines = [
+            f"# {project_info.get('title', self.project_path.name)}",
+            "",
+            "## Project Information",
+        ]
+
+        # Add bullet points for non-empty project fields
+        if project_info.get('short_description'):
+            md_lines.append(f"- **Short Description:** {project_info.get('short_description')}")
+
+        if project_info.get('notes'):
+            md_lines.append(f"- **Project Notes:** {project_info.get('notes')}")
+
+        if project_info.get('tags'):
+            md_lines.append(f"- **Tags:** {', '.join(project_info.get('tags'))}")
+
+        md_lines.extend([
+            "",
+            f"**Export Date:** {timestamp}",
+            f"**Export Type:** {export_type}",
+            ""
+        ])
+
+        # First Frame table
+        if first_data:
+            md_lines.extend([
+                "## First Frame",
+                "| Order | Shot Name | Display Name | Captions | Prompts |",
+                "|-------|-----------|--------------|----------|---------|"
+            ])
+            for order, name, display_name, caption, prompt in first_data:
+                md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+            md_lines.append("")
+
+        # Last Frame table
+        if last_data:
+            md_lines.extend([
+                "## Last Frame",
+                "| Order | Shot Name | Display Name | Captions | Prompts |",
+                "|-------|-----------|--------------|----------|---------|"
+            ])
+            for order, name, display_name, caption, prompt in last_data:
+                md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+            md_lines.append("")
+
+        # Video table
+        if video_data:
+            md_lines.extend([
+                "## Video",
+                "| Order | Shot Name | Display Name | Captions | Prompts |",
+                "|-------|-----------|--------------|----------|---------|"
+            ])
+            for order, name, display_name, caption, prompt in video_data:
+                md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+            md_lines.append("")
+
+        # Alt Video table
+        if alt_video_data:
+            md_lines.extend([
+                "## Alt Video",
+                "| Order | Shot Name | Display Name | Captions | Prompts |",
+                "|-------|-----------|--------------|----------|---------|"
+            ])
+            for order, name, display_name, caption, prompt in alt_video_data:
+                md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+            md_lines.append("")
+
+        # Audio table
+        if audio_data:
+            md_lines.extend([
+                "## Audio",
+                "| Order | Shot Name | Display Name | Captions | Prompts |",
+                "|-------|-----------|--------------|----------|---------|"
+            ])
+            for order, name, display_name, caption, prompt in audio_data:
+                md_lines.append(f"| {order:03d} | {name} | {display_name} | {caption.replace('|', '\\|').replace('\n', '<br>')} | {prompt.replace('|', '\\|').replace('\n', '<br>')} |")
+            md_lines.append("")
+
+        # Notes table
+        if notes_list:
+            md_lines.extend([
+                "## Notes",
+                "| Order | Shot Name | Display Name | Notes |",
+                "|-------|-----------|--------------|-------|"
+            ])
+            for order, name, display_name, notes in notes_list:
+                md_lines.append(f"| {order:03d} | {name} | {display_name} | {notes.replace('|', '\\|').replace('\n', '<br>')} |")
+            md_lines.append("")
+
+        # Write MD file
+        md_path = export_dir / "export_summary.md"
+        with open(md_path, 'w', encoding='utf-8') as f:
+            f.write('\n'.join(md_lines))
+
+    def _write_html_export(self, export_dir, non_archived_shots, project_info, export_type, timestamp):
+        """Write HTML export — delegates to ``html_exporter`` module."""
+        from app.services.html_exporter import write_html_export as _do_export
+        _do_export(self, export_dir, non_archived_shots, project_info, export_type, timestamp)
 
 def get_shot_manager(project_path, cache=None):
     """Retrieve a cached ``ShotManager`` for the given path."""
