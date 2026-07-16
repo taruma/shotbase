@@ -4,7 +4,7 @@
 
 | Item | Value |
 |---|---|
-| **Version** | 4.1.0 |
+| **Version** | 4.2.0 |
 | **Git Branch** | `main` |
 | **Python Requirement** | ≥3.13.1 |
 | **Default Host:Port** | 127.0.0.1:5001 |
@@ -31,6 +31,7 @@ Key features include:
 - Visual reorder modal with drag-and-drop grid, thumbnail switching, preview, and inline editing
 - Project info management (title, version, description, tags)
 - Export with metadata to markdown (including display name columns)
+- HTML gallery export with embedded assets, sidebar TOC, and copy-prompt buttons
 - Light/dark theme toggle
 - Native folder picker for project creation
 - Media modals with keyboard navigation (arrows)
@@ -71,6 +72,7 @@ shotbuddy/
 │   │   ├── shot_manager.py     # Core shot operations
 │   │   ├── project_manager.py  # Project state, recent projects, info CRUD
 │   │   ├── file_handler.py     # Uploads and asset processing
+│   │   ├── html_exporter.py   # HTML export gallery writer
 │   ├── config/            # Configuration (constants.py)
 │   └── static/            # Static assets
 │       ├── css/           # core.css, layout.css, shot-grid.css, modals.css, main.css, styles.css, visual-reorder.css, search-modal.css
@@ -146,6 +148,7 @@ Environment variables can override config file settings:
 - **ShotManager**: Core service for shot operations, file management, version tracking, thumbnail generation, and metadata handling
 - **ProjectManager**: Handles project state, recent projects (up to 6), and current project tracking
 - **FileHandler**: Manages file uploads and asset processing for all asset types including alt_video and audio
+- **HTML Exporter**: Standalone module (`html_exporter.py`) for generating self-contained HTML gallery pages with embedded CSS, sidebar navigation, lazy-loaded assets, Markdown rendering, and copy-prompt functionality
 - **Routes**: REST API endpoints for project and shot operations
 
 ---
@@ -187,7 +190,7 @@ Environment variables can override config file settings:
 | POST | `/api/shots/open-exports-folder` | — | Open current project's exports folder (creates if missing) |
 | POST | `/api/shots/promote` | `{shot_name, asset_type, version}` | Promote a WIP version to latest |
 | POST | `/api/shots/archive` | `{shot_name, archived: bool}` | Toggle archived state |
-| POST | `/api/shots/export` | `{export_name, export_type, include_display_in_filename, include_metadata}` | Export latest assets + optional metadata.md with display name columns |
+| POST | `/api/shots/export` | `{export_name, export_type, include_display_in_filename, include_metadata, export_format}` | Export latest assets + optional metadata (Markdown .md or HTML gallery export_summary.html) with display name columns |
 | GET | `/api/shots/video/<shot_name>` | optional: `?type=video` (default) or `?type=alt_video` | Serve promoted video file |
 | GET | `/api/shots/image/<shot_name>/<asset_type>` | — | Serve promoted image (first_image/last_image) |
 | GET | `/api/shots/audio/<shot_name>` | — | Serve promoted audio file from latest_audio |
@@ -226,12 +229,15 @@ shot_routes.py ──→ get_shot_manager(path) ──→ ShotManager (cached pe
                                           ├── ffmpeg (video thumbs, optional)
                                           ├── tkinter (folder picker)
                                           └── subprocess (reveal/open-folder/open-exports)
+
+shot_routes.py ──→ ShotManager._write_html_export() ──→ html_exporter.write_html_export()
 ```
 
 ### Side Effects of Common Operations
 - **Creating a shot**: creates `shots/wip/SH###/` with `images/`, `videos/`, `audio/` subdirs; creates shot order entry; updates project timestamp
 - **Uploading an asset**: saves to `wip/SH###/images/`, `videos/`, or `audio/` with version suffix; copies to `latest_images/`, `latest_videos/`, or `latest_audio/`; lazy thumbnail URL computed (generated on first request for images/videos); updates version marker
 - **Promoting an asset**: copies WIP version → latest dir; updates `.version` marker; thumbnail regenerated on next request
+- **Exporting assets**: copies latest promoted files to `exports/<name>/` (images/ videos/ audio/ subdirs); generates `metadata.md` (Markdown) or `export_summary.html` (self-contained HTML gallery with sidebar TOC, asset embeds, prompts, copy buttons) depending on `export_format`; HTML export delegates to `html_exporter.write_html_export()`
 - **Archiving a shot**: toggles entry in `.archived_shots.json`
 
 ---
@@ -315,6 +321,17 @@ Every project directory contains these files (under `shots/`):
 - Version markers: `SH###_audio.version`
 - Each `.version` file contains a single integer
 
+### `exports/<name>/metadata.md`
+- Markdown export (generated when `export_format: "md"` or default)
+- Contains tables of first/last frame data, video data, alt video data, audio data, and shot notes
+
+### `exports/<name>/export_summary.html`
+- Self-contained HTML gallery (generated when `export_format: "html"`)
+- Embedded CSS (dark theme), fixed sidebar TOC with anchor links
+- Project header with tag pills, meta card (version, shot count, dates), Markdown-rendered project notes
+- Per-shot cards with lazy-loaded images, video/audio embeds, captions, prompts with copy buttons
+- References assets in `images/`, `videos/`, `audio/` subdirectories
+
 ### `.shotbuddy/thumbnails/` (per-project cache)
 - Image thumbs: `SH###_SH###_first_thumb.jpg`
 - Video thumbs: `SH###_SH###_vthumb.jpg` (regular), `SH###_SH###_alt_vthumb.jpg` (alt)
@@ -377,7 +394,7 @@ Every project directory contains these files (under `shots/`):
   - `app/static/css/core.css` — reset, CSS variables, body, buttons, forms, notifications, tooltips
   - `app/static/css/layout.css` — header, TOC panel, setup screen, footer, back-to-top, archived sections
   - `app/static/css/shot-grid.css` — grid, rows, drop zones, thumbnails, badges, notes, captions, drag-and-drop
-  - `app/static/css/modals.css` — all modals (prompt, reorder, export, video, image, audio, project-info, create-project)
+  - `app/static/css/modals.css` — all modals (prompt, reorder, export with format radio buttons, video, image, audio, project-info, create-project)
   - `app/static/css/main.css` — remaining primary styles not split into modules
   - `app/static/css/styles.css` — light theme overrides (loaded last among app styles)
   - `app/static/css/visual-reorder.css` — visual reorder grid styles
