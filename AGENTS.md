@@ -5,11 +5,14 @@
 | Item | Value |
 |---|---|
 | **Version** | 4.2.0 |
-| **Git Branch** | `main` |
 | **Python Requirement** | ≥3.13.1 |
 | **Default Host:Port** | 127.0.0.1:5001 |
 | **Package Manager** | `uv` (do NOT use `pip install`) |
 | **Linter** | ruff (config in pyproject.toml, line-length=120) |
+
+### Related Documents
+- **[CHANGELOG.md](CHANGELOG.md)** — full release history with feature-level details per version
+- **[README.md](README.md)** — feature overview, screenshots, and setup guide for end users
 
 ---
 
@@ -407,7 +410,7 @@ Every project directory contains these files (under `shots/`):
 
 ### JavaScript Architecture
 Key patterns:
-- Theme toggle: persists preference in `localStorage` under `shotbuddy-theme`, toggles `.light-theme` on `<body>`
+- Theme toggle: persists preference in `localStorage` under `shotbuddy-theme`, toggles `.light` class on `<body>` (migrated from `body.light-theme` in v4.2.0)
 - Project state: uses `sessionStorage` to track whether user is in a project
 - Event delegation: uses `data-*` attributes instead of inline `onclick` handlers
 - TOC (Table of Contents): side panel rendered dynamically, supports filter/search, persists open/close state, collapsible archived section
@@ -420,15 +423,22 @@ Key patterns:
 - Dynamic page title: browser tab updates with project info and app version on screen transitions
 
 ### CSS Organization
-CSS is split into modular files, loaded in the order listed in `index.html` (see Structure above). Each file has a header comment describing its contents:
-- `core.css` (404 lines) — reset, CSS variables, body styling, button primitives, form inputs, notification toasts, tooltips
-- `layout.css` (560 lines) — header bar, TOC side panel, setup screen, footer, back-to-top button, archived section collapsible
-- `shot-grid.css` (586 lines) — shot grid layout, row structure, drop zones, thumbnail sizing, version badges, notes display, captions, drag-and-drop styling
-- `modals.css` (893 lines) — prompt modal, reorder modal, export modal (with `.export-utility-row`), video/image/audio viewers, project-info modal, create-project modal
+CSS is split into modular files, loaded in the order listed in `index.html` (see Structure above):
+- `core.css` — reset, CSS variables, body styling, button primitives, form inputs, notification toasts, tooltips
+- `layout.css` — header bar, TOC side panel, setup screen, footer, back-to-top button, archived section collapsible
+- `shot-grid.css` — shot grid layout, row structure, drop zones, thumbnail sizing, version badges, notes display, captions, drag-and-drop styling
+- `modals.css` — prompt modal, reorder modal, export modal (with `.export-utility-row`), video/image/audio viewers, project-info modal, create-project modal
 - `main.css` — remaining primary styles (dark theme default) not split into modules
 - `styles.css` — light theme overrides only (loaded after all other CSS)
 - `visual-reorder.css` — responsive 5-column grid, cards, thumbnail selectors, preview/edit mode styles
 - `search-modal.css` — search modal layout, filter pills, snippet styling, keyboard focus
+
+### Theme System
+- **Class**: Theme is controlled by toggling the `.light` class on `<body>` (migrated from `body.light-theme` in v4.2.0)
+- **Persistence**: User preference stored in `localStorage` under key `shotbuddy-theme`
+- **Toggle**: Theme button in header calls `document.body.classList.toggle('light')`
+- **Overrides**: Global light theme overrides live in `styles.css`. Individual modules (`search-modal.css`, `modals.css`, `shot-grid.css`, `layout.css`) contain their own `.light`-prefixed blocks for component-specific light styling
+- **Adding new components**: Add dark theme styles as defaults, then add `.light`-prefixed overrides in the same CSS file (or in `styles.css` for cross-cutting concerns)
 
 ---
 
