@@ -2,7 +2,7 @@
 
 ## v4.2.0 (July 16, 2026) - by Taruma Sakti
 
-This minor release introduces a self-contained HTML gallery export with sidebar navigation, copy-to-clipboard buttons, Markdown-rendered project notes, styled tag pills, and a meta card. The CSS codebase has been modularized into five focused files, and the light-theme class has been migrated from `body.light-theme` to `.light`. Several UI polish items and fixes round out the release.
+This minor release introduces a self-contained HTML gallery export with sidebar navigation, copy-to-clipboard buttons, Markdown-rendered project notes, styled tag pills, and a meta card. The CSS codebase has been modularized into five focused files, and the light-theme class has been migrated from `body.light-theme` to `.light`. The backend service layer has been decomposed from a monolithic `shot_manager.py` into a facade orchestrating five sub-service modules. Several UI polish items and fixes round out the release.
 
 ### Added
 - **HTML Gallery Export**: New `html` export format alongside the existing Markdown default. The self-contained HTML page includes:
@@ -25,15 +25,22 @@ This minor release introduces a self-contained HTML gallery export with sidebar 
 - **Prompt Version Validation & JSON Error Standardization**: The prompt save endpoint now validates the `version` parameter as an integer and returns a 400 error if invalid. All error responses across thumbnail serving, video/image/audio serving, and prompt saving have been standardized from plain-text strings to structured `{"success": false, "error": "..."}` JSON with proper HTTP status codes.
 
 ### Refactored
+- **Python Service Decomposition**: The monolithic `shot_manager.py` has been split into a facade orchestrator and five focused sub-service modules:
+  - `shot_utils.py` — shot name validation, parsing, formatting, cache factory (`get_shot_manager`)
+  - `shot_order.py` — `ShotOrderManager` for display order + archive JSON I/O
+  - `metadata.py` — `ShotMetadata` for notes, captions, and display-name CRUD
+  - `prompts.py` — `PromptStore` for prompt file path resolution, CRUD, and version listing
+  - `export_service.py` — `ExportService` for asset export and MD/HTML generation
+  The `ShotManager` class now serves as a facade with lazy-initialized sub-service properties, preserving full backward compatibility with all route handlers. Each extracted module follows the Single Responsibility Principle with focused public APIs.
 - **Modular CSS Architecture**: The monolithic CSS has been split into five focused modules — `core.css` (reset, buttons, forms), `layout.css` (header, TOC, setup, footer), `shot-grid.css` (grid, rows, thumbnails, drag-and-drop), `modals.css` (all modal styles), and `main.css` (remaining primary styles). Light theme overrides were consolidated in `styles.css`. As part of this refactor, the theme class was migrated from `body.light-theme` to `.light` in `search-modal.css`, and missing focus styles (`.notes-input`, `.asset-caption-input`, `.toc-filter`) and hover styles (`.drop-zone.empty`) were added to the light theme.
 
 ### Documentation
-- **AGENTS.md Updated**: Documented the new HTML gallery export feature (endpoint parameter, `html_exporter.py` module, side effects), the modular CSS file structure (file responsibilities, line counts, load order), and bumped the project version to 4.2.0.
+- **AGENTS.md Updated**: Documented the new HTML gallery export feature (endpoint parameter, `html_exporter.py` module, side effects), the modular CSS file structure (file responsibilities, line counts, load order), the decomposed Python service architecture (facade pattern, sub-service responsibilities, dependency diagram), and bumped the project version to 4.2.0.
 
 ### AI Development Attribution
 This release was developed with AI assistance using Deepseek V4 pro with Cline in Plan and Act mode. All generated changes were manually reviewed, tested, and refined by the maintainer, Taruma Sakti, to ensure quality and alignment with project goals.
 
-This version enhances export capabilities with a polished HTML gallery and improves CSS maintainability through modularization.
+This version enhances export capabilities with a polished HTML gallery and improves both CSS and Python maintainability through modularization and service decomposition.
 
 ## v4.1.0 (July 4, 2026) - by Taruma Sakti
 

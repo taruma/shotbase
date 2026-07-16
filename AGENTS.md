@@ -72,10 +72,15 @@ shotbuddy/
 │   ├── utils.py            # Path sanitization, version reader
 │   ├── routes/            # API routes (project_routes.py, shot_routes.py)
 │   ├── services/          # Business logic
-│   │   ├── shot_manager.py     # Core shot operations
+│   │   ├── shot_manager.py     # Facade orchestrating sub-services (shot CRUD, asset discovery, promotion, thumbnails)
+│   │   ├── shot_utils.py       # Shot name validation, parsing, formatting, cache factory
+│   │   ├── shot_order.py       # Shot display order + archive state (ShotOrderManager)
+│   │   ├── metadata.py         # Notes, captions, display-name CRUD (ShotMetadata)
+│   │   ├── prompts.py          # Prompt file path resolution, CRUD, version listing (PromptStore)
+│   │   ├── export_service.py   # Asset export + MD/HTML generation (ExportService)
 │   │   ├── project_manager.py  # Project state, recent projects, info CRUD
 │   │   ├── file_handler.py     # Uploads and asset processing
-│   │   ├── html_exporter.py   # HTML export gallery writer
+│   │   ├── html_exporter.py    # HTML export gallery writer
 │   ├── config/            # Configuration (constants.py)
 │   └── static/            # Static assets
 │       ├── css/           # core.css, layout.css, shot-grid.css, modals.css, main.css, styles.css, visual-reorder.css, search-modal.css
@@ -148,7 +153,12 @@ Environment variables can override config file settings:
 ---
 
 ## Key Components
-- **ShotManager**: Core service for shot operations, file management, version tracking, thumbnail generation, and metadata handling
+- **ShotManager**: Facade orchestrating shot lifecycle, asset discovery, promotion, thumbnail generation, and export. Delegates order/archive I/O to `ShotOrderManager`, metadata CRUD to `ShotMetadata`, prompt I/O to `PromptStore`, and export logic to `ExportService`.
+- **ShotUtils** (`shot_utils.py`): Module-level helpers — shot name validation (`validate_shot_name`), parsing (`_parse_shot_parts`), formatting (`_format_shot_parts`), and the `get_shot_manager` / `clear_shot_manager_cache` cache factory.
+- **ShotOrderManager** (`shot_order.py`): Manages shot display order (`.shot_order.json`) and archived state (`.archived_shots.json`) via pure JSON file I/O.
+- **ShotMetadata** (`metadata.py`): CRUD for per-shot notes (`notes.txt`), captions (`captions.json`), and display-name metadata (`meta.json`).
+- **PromptStore** (`prompts.py`): Prompt file path resolution, CRUD for prompt text files, and version listing for all asset types.
+- **ExportService** (`export_service.py`): Handles asset export (file copy) and metadata generation — Markdown tables (`_write_md_export`) or HTML gallery (delegates to `html_exporter`).
 - **ProjectManager**: Handles project state, recent projects (up to 6), and current project tracking
 - **FileHandler**: Manages file uploads and asset processing for all asset types including alt_video and audio
 - **HTML Exporter**: Standalone module (`html_exporter.py`) for generating self-contained HTML gallery pages with embedded CSS, sidebar navigation, lazy-loaded assets, Markdown rendering, and copy-prompt functionality
@@ -223,9 +233,15 @@ Environment variables can override config file settings:
 ```
 project_routes.py ──→ ProjectManager (singleton, per-app)
                           │
-shot_routes.py ──→ get_shot_manager(path) ──→ ShotManager (cached per project path)
+shot_routes.py ──→ get_shot_manager(path) ──→ ShotManager (facade, cached per project path)
                           │                         │
                      FileHandler ────→ ShotManager   │
+                                                     │
+                                          ┌──────────┴──────────────────────────────────┐
+                                          ├── ShotOrderManager (order / archive JSON I/O) │
+                                          ├── ShotMetadata     (notes, captions, meta)    │
+                                          ├── PromptStore      (prompt txt files)         │
+                                          └── ExportService    (asset export, MD, HTML)   │
                                                      │
                                           ┌──────────┘
                                           ├── Pillow (thumbnails, lazy generation)
@@ -455,8 +471,8 @@ CSS is split into modular files, loaded in the order listed in `index.html` (see
 1. Add allowed extensions check in `FileHandler.save_file()` if needed
 2. Add canonical type mapping if aliasing (like `image` → `first_image`)
 3. Add naming conventions and file patterns in `ShotManager` (detection, versioning, thumbnail, prompt paths)
-4. Add prompt file path logic in `ShotManager._prompt_file_path()`
-5. Add caption type validation in `ShotManager.save_caption()` if needed
+4. Add prompt file path logic in `PromptStore._prompt_file_path()`
+5. Add caption type validation in `ShotMetadata.save_caption()` if needed
 6. Add version marker path in `ShotManager._version_marker_path()`
 7. Add to `get_shot_info()` response dict with file, versions, thumbnail, prompt, caption
 8. Add to `_rename_shot_files()` if the asset has rename logic
