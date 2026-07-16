@@ -1564,29 +1564,56 @@ class ShotManager:
         # --- Main content area ---
         lines.append('<div class="sb-content">')
 
+        # Format a readable date from ISO or timestamp string
+        def _fmt_date(val):
+            if not val:
+                return ''
+            try:
+                from datetime import datetime as _dt
+                # Try ISO 8601
+                d = _dt.fromisoformat(str(val).replace('Z', '+00:00'))
+            except Exception:
+                return esc(str(val))
+            return d.strftime('%b %d, %Y')
+
         # Header
         lines.append('<header class="sb-header">')
-        lines.append(f'<h1>{title}</h1>')
+        lines.append(f'<h1 class="sb-title">{title}</h1>')
         if project_info.get('short_description'):
             lines.append(f'<p class="sb-subtitle">{esc(project_info.get("short_description"))}</p>')
-        lines.append('<div class="sb-meta">')
+
+        # Tag pills
         if project_info.get('tags'):
-            tags = ', '.join(project_info.get('tags', []))
-            lines.append(f'<span>Tags: {esc(tags)}</span>')
+            lines.append('<div class="sb-tags">')
+            for tag in project_info.get('tags', []):
+                lines.append(f'<span class="sb-tag">{esc(tag.strip())}</span>')
+            lines.append('</div>')
+
+        # Meta card
+        lines.append('<div class="sb-meta-card">')
+        meta_items = []
         if project_info.get('version'):
-            lines.append(f'<span>Version: {esc(project_info.get("version"))}</span>')
-        lines.append(f'<span>Exported: {timestamp}</span>')
-        lines.append(f'<span>Shots: {len(shot_assets)}</span>')
+            meta_items.append(f'<span class="sb-meta-badge">v{esc(project_info.get("version"))}</span>')
+        meta_items.append(f'<span class="sb-meta-badge">{len(shot_assets)} shots</span>')
+        meta_items.append(f'<span class="sb-meta-badge">Exported {_fmt_date(timestamp)}</span>')
         if project_info.get('created'):
-            lines.append(f'<span>Created: {esc(project_info.get("created"))}</span>')
+            created_str = _fmt_date(project_info.get('created'))
+            if created_str:
+                meta_items.append(f'<span class="sb-meta-badge">Created {created_str}</span>')
         if project_info.get('updated'):
-            lines.append(f'<span>Updated: {esc(project_info.get("updated"))}</span>')
+            updated_str = _fmt_date(project_info.get('updated'))
+            if updated_str:
+                meta_items.append(f'<span class="sb-meta-badge">Updated {updated_str}</span>')
+        lines.append(' · '.join(meta_items))
         lines.append('</div>')
 
         # Project notes (Markdown rendered)
         if project_info.get('notes'):
             lines.append('<div class="sb-project-notes">')
+            lines.append('<div class="sb-project-notes-label">📋 Project Notes</div>')
+            lines.append('<div class="sb-project-notes-body">')
             lines.append(_md_to_html(project_info.get('notes', '')))
+            lines.append('</div>')
             lines.append('</div>')
 
         lines.append('</header>')
@@ -1773,31 +1800,65 @@ body {
 }
 
 .sb-header {
-  max-width: 1000px;
+  max-width: 900px;
   margin: 0 auto;
-  padding: 40px 20px 24px;
+  padding: 48px 24px 32px;
   text-align: center;
   border-bottom: 1px solid var(--border);
 }
 
-.sb-header h1 {
-  font-size: 2em;
-  margin-bottom: 8px;
+.sb-title {
+  font-size: 2.4em;
+  font-weight: 700;
+  margin-bottom: 6px;
   color: #fff;
+  letter-spacing: -0.3px;
 }
 
 .sb-subtitle {
   color: var(--text-muted);
-  margin-bottom: 12px;
+  font-style: italic;
+  font-size: 1.05em;
+  margin-bottom: 20px;
 }
 
-.sb-meta {
+/* Tag pills */
+.sb-tags {
   display: flex;
-  gap: 24px;
   justify-content: center;
   flex-wrap: wrap;
-  font-size: 0.85em;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.sb-tag {
+  display: inline-block;
+  background: rgba(91, 141, 239, 0.15);
+  color: var(--accent);
+  border: 1px solid rgba(91, 141, 239, 0.3);
+  border-radius: 20px;
+  padding: 3px 14px;
+  font-size: 0.78em;
+  font-weight: 500;
+}
+
+/* Meta card with badges */
+.sb-meta-card {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+  background: var(--prompt-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 0.82em;
   color: var(--text-muted);
+  margin-bottom: 0;
+}
+
+.sb-meta-badge {
+  white-space: nowrap;
 }
 
 /* Sidebar TOC */
@@ -2003,35 +2064,53 @@ body {
   min-width: 200px;
 }
 
-/* Project notes (rendered Markdown) */
+/* Project notes card */
 .sb-project-notes {
   max-width: 800px;
-  margin: 20px auto 0;
+  margin: 24px auto 0;
   text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.sb-project-notes-label {
+  background: var(--card-bg);
+  padding: 10px 16px;
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sb-project-notes-body {
+  padding: 16px 20px;
   font-size: 0.9em;
   color: var(--text);
   line-height: 1.6;
 }
 
-.sb-project-notes p {
+.sb-project-notes-body p {
   margin-bottom: 10px;
 }
 
-.sb-project-notes ul {
+.sb-project-notes-body ul {
   margin: 8px 0 12px 24px;
 }
 
-.sb-project-notes li {
+.sb-project-notes-body li {
   margin-bottom: 4px;
 }
 
-.sb-project-notes h3, .sb-project-notes h4 {
+.sb-project-notes-body h3, .sb-project-notes-body h4 {
   color: var(--accent);
   margin: 16px 0 8px;
   font-size: 1.05em;
 }
 
-.sb-project-notes code {
+.sb-project-notes-body code {
   background: var(--prompt-bg);
   border: 1px solid var(--border);
   border-radius: 3px;
@@ -2040,7 +2119,7 @@ body {
   font-size: 0.9em;
 }
 
-.sb-project-notes pre {
+.sb-project-notes-body pre {
   background: var(--prompt-bg);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -2049,14 +2128,14 @@ body {
   margin: 10px 0;
 }
 
-.sb-project-notes pre code {
+.sb-project-notes-body pre code {
   background: none;
   border: none;
   padding: 0;
   font-size: 0.85em;
 }
 
-.sb-project-notes strong {
+.sb-project-notes-body strong {
   color: #fff;
 }
 
