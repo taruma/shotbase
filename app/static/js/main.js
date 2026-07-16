@@ -2157,6 +2157,8 @@ async function confirmExport() {
     const exportAudio = document.getElementById('export-audio').checked;
     const includeDisplay = document.getElementById('include-display-in-filename').checked;
     const includeMetadata = document.getElementById('include-metadata').checked;
+    const exportFormatEl = document.querySelector('input[name="export-format"]:checked');
+    const exportFormat = exportFormatEl ? exportFormatEl.value : 'md';
 
     // Determine export type based on checkbox states
     let exportType;
@@ -2191,7 +2193,8 @@ async function confirmExport() {
                 export_name: exportName || null,
                 export_type: exportType,
                 include_display_in_filename: includeDisplay,
-                include_metadata: includeMetadata
+                include_metadata: includeMetadata,
+                export_format: exportFormat
             })
         });
 

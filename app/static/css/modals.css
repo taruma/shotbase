@@ -375,6 +375,77 @@
     box-shadow: 0 0 0 3px rgba(0, 200, 81, 0.2);
 }
 
+/* Radio buttons (mirror checkbox styles with round shape) */
+.radio-inline {
+    display: inline-flex;
+    align-items: center;
+    margin-right: 24px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    margin-bottom: 0;
+}
+
+.radio-label input[type="radio"] {
+    display: none;
+}
+
+.radio-custom {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #505050;
+    border-radius: 50%;
+    margin-right: 12px;
+    position: relative;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+    background: transparent;
+}
+
+.radio-label:hover .radio-custom {
+    border-color: #5b8def;
+}
+
+.radio-label input[type="radio"]:checked + .radio-custom {
+    border-color: #5b8def;
+    background: #5b8def;
+    box-shadow: inset 0 0 0 3px #252525;
+}
+
+.radio-text {
+    color: #e5e5e5;
+    font-size: 14px;
+    font-weight: 400;
+}
+
+.radio-label input[type="radio"]:focus + .radio-custom {
+    box-shadow: 0 0 0 3px rgba(91, 141, 239, 0.25);
+}
+
+/* Light theme overrides for radio buttons */
+.light .radio-custom {
+    background: #ffffff;
+    border-color: #888;
+}
+
+.light .radio-label:hover .radio-custom {
+    border-color: #5b8def;
+}
+
+.light .radio-label input[type="radio"]:checked + .radio-custom {
+    background: #5b8def;
+    border-color: #5b8def;
+    box-shadow: inset 0 0 0 3px #ffffff;
+}
+
+.light .radio-text {
+    color: #1a1a1a;
+}
+
 .export-actions {
     margin-top: 28px;
     padding-top: 20px;
