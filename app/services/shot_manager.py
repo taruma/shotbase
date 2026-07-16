@@ -1430,7 +1430,7 @@ class ShotManager:
 
     def _write_html_export(self, export_dir, non_archived_shots, project_info, export_type, timestamp):
         """Write HTML export with shot-centric gallery layout."""
-        import html
+        import html as _html
         import re
         from datetime import datetime as dt
 
@@ -1438,10 +1438,47 @@ class ShotManager:
             """Escape text for HTML content (not attributes)."""
             if not text:
                 return ''
-            return html.escape(str(text))
+            return _html.escape(str(text))
 
         def sanitize_filename(name):
             return re.sub(r'[<>:\"/\\\\|?*]', '_', str(name))[:50] or ''
+
+        def _md_to_html(text):
+            """Convert basic Markdown to HTML (bold, italic, code, lists, headings, fenced code)."""
+            if not text:
+                return ''
+            # Escape HTML first
+            t = _html.escape(text)
+            # Fenced code blocks (```...```)
+            t = re.sub(r'```\n?(.*?)\n?```', r'<pre><code>\1</code></pre>', t, flags=re.DOTALL)
+            # Inline code
+            t = re.sub(r'`([^`]+)`', r'<code>\1</code>', t)
+            # Bold
+            t = re.sub(r'\*\*([^*]+)\*\*', r'<strong>\1</strong>', t)
+            # Italic
+            t = re.sub(r'\*([^*]+)\*', r'<em>\1</em>', t)
+            # Unordered list items
+            t = re.sub(r'(?:^|\n)- (.+)', r'\n<li>\1</li>', t)
+            # Wrap consecutive <li> in <ul>
+            t = re.sub(r'((?:<li>.*?</li>\n?)+)', r'<ul>\1</ul>', t)
+            # Headings
+            t = re.sub(r'^### (.+)$', r'<h4>\1</h4>', t, flags=re.MULTILINE)
+            t = re.sub(r'^## (.+)$', r'<h3>\1</h3>', t, flags=re.MULTILINE)
+            t = re.sub(r'^# (.+)$', r'<h3>\1</h3>', t, flags=re.MULTILINE)
+            # Blank-line paragraph breaks
+            paragraphs = t.split('\n\n')
+            processed = []
+            for p in paragraphs:
+                p = p.strip()
+                if not p:
+                    continue
+                if p.startswith('<ul>') or p.startswith('<pre>') or p.startswith('<h'):
+                    processed.append(p)
+                else:
+                    # Replace single newlines with <br> within paragraphs
+                    p = p.replace('\n', '<br>\n')
+                    processed.append(f'<p>{p}</p>')
+            return '\n'.join(processed)
 
         # Build asset info per shot (reuse patterns but organized per-shot)
         shot_assets = []
@@ -1536,9 +1573,22 @@ class ShotManager:
         if project_info.get('tags'):
             tags = ', '.join(project_info.get('tags', []))
             lines.append(f'<span>Tags: {esc(tags)}</span>')
+        if project_info.get('version'):
+            lines.append(f'<span>Version: {esc(project_info.get("version"))}</span>')
         lines.append(f'<span>Exported: {timestamp}</span>')
         lines.append(f'<span>Shots: {len(shot_assets)}</span>')
+        if project_info.get('created'):
+            lines.append(f'<span>Created: {esc(project_info.get("created"))}</span>')
+        if project_info.get('updated'):
+            lines.append(f'<span>Updated: {esc(project_info.get("updated"))}</span>')
         lines.append('</div>')
+
+        # Project notes (Markdown rendered)
+        if project_info.get('notes'):
+            lines.append('<div class="sb-project-notes">')
+            lines.append(_md_to_html(project_info.get('notes', '')))
+            lines.append('</div>')
+
         lines.append('</header>')
 
         # Shot cards
@@ -1953,7 +2003,64 @@ body {
   min-width: 200px;
 }
 
-/* Notes */
+/* Project notes (rendered Markdown) */
+.sb-project-notes {
+  max-width: 800px;
+  margin: 20px auto 0;
+  text-align: left;
+  font-size: 0.9em;
+  color: var(--text);
+  line-height: 1.6;
+}
+
+.sb-project-notes p {
+  margin-bottom: 10px;
+}
+
+.sb-project-notes ul {
+  margin: 8px 0 12px 24px;
+}
+
+.sb-project-notes li {
+  margin-bottom: 4px;
+}
+
+.sb-project-notes h3, .sb-project-notes h4 {
+  color: var(--accent);
+  margin: 16px 0 8px;
+  font-size: 1.05em;
+}
+
+.sb-project-notes code {
+  background: var(--prompt-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+
+.sb-project-notes pre {
+  background: var(--prompt-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  margin: 10px 0;
+}
+
+.sb-project-notes pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.85em;
+}
+
+.sb-project-notes strong {
+  color: #fff;
+}
+
+/* Notes (shot-level) */
 .sb-notes {
   background: var(--prompt-bg);
   border: 1px solid var(--border);
