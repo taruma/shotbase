@@ -1514,6 +1514,19 @@ class ShotManager:
         lines.append('</head>')
         lines.append('<body>')
 
+        # --- Sidebar TOC ---
+        lines.append('<aside class="sb-sidebar" id="sidebar">')
+        lines.append('<div class="sb-sidebar-title">Contents</div>')
+        lines.append('<ul class="sb-sidebar-list">')
+        for sa in shot_assets:
+            label = f"{sa['name']} &middot; {esc(sa['display_name'])}" if sa['display_name'] else sa['name']
+            lines.append(f'<li><a href="#shot-{sa["order"]:03d}">{label}</a></li>')
+        lines.append('</ul>')
+        lines.append('</aside>')
+
+        # --- Main content area ---
+        lines.append('<div class="sb-content">')
+
         # Header
         lines.append('<header class="sb-header">')
         lines.append(f'<h1>{title}</h1>')
@@ -1527,15 +1540,6 @@ class ShotManager:
         lines.append(f'<span>Shots: {len(shot_assets)}</span>')
         lines.append('</div>')
         lines.append('</header>')
-
-        # TOC bar (sticky)
-        lines.append('<nav class="sb-toc" id="toc">')
-        lines.append('<div class="sb-toc-inner">')
-        for sa in shot_assets:
-            label = f"{sa['name']} &middot; {esc(sa['display_name'])}" if sa['display_name'] else sa['name']
-            lines.append(f'<a href="#shot-{sa["order"]:03d}">{label}</a>')
-        lines.append('</div>')
-        lines.append('</nav>')
 
         # Shot cards
         lines.append('<main class="sb-main">')
@@ -1569,7 +1573,7 @@ class ShotManager:
                 if info['first_image'].get('caption'):
                     lines.append(f'<p class="sb-caption"><strong>Caption:</strong> {esc(info["first_image"]["caption"])}</p>')
                 if info['first_image'].get('prompt'):
-                    lines.append(f'<div class="sb-prompt"><strong>Prompt:</strong><pre>{esc(info["first_image"]["prompt"])}</pre></div>')
+                    lines.append(f'<div class="sb-prompt"><div class="sb-prompt-header"><strong>Prompt:</strong><button class="sb-copy-btn" onclick="copyPrompt(this)">📋 Copy</button></div><pre>{esc(info["first_image"]["prompt"])}</pre></div>')
                 lines.append('</div>')
 
                 # Last frame
@@ -1583,7 +1587,7 @@ class ShotManager:
                 if info['last_image'].get('caption'):
                     lines.append(f'<p class="sb-caption"><strong>Caption:</strong> {esc(info["last_image"]["caption"])}</p>')
                 if info['last_image'].get('prompt'):
-                    lines.append(f'<div class="sb-prompt"><strong>Prompt:</strong><pre>{esc(info["last_image"]["prompt"])}</pre></div>')
+                    lines.append(f'<div class="sb-prompt"><div class="sb-prompt-header"><strong>Prompt:</strong><button class="sb-copy-btn" onclick="copyPrompt(this)">📋 Copy</button></div><pre>{esc(info["last_image"]["prompt"])}</pre></div>')
                 lines.append('</div>')
 
                 lines.append('</div>')  # .sb-two-col
@@ -1607,7 +1611,7 @@ class ShotManager:
                 if info['video'].get('caption'):
                     lines.append(f'<p class="sb-caption"><strong>Caption:</strong> {esc(info["video"]["caption"])}</p>')
                 if info['video'].get('prompt'):
-                    lines.append(f'<div class="sb-prompt"><strong>Prompt:</strong><pre>{esc(info["video"]["prompt"])}</pre></div>')
+                    lines.append(f'<div class="sb-prompt"><div class="sb-prompt-header"><strong>Prompt:</strong><button class="sb-copy-btn" onclick="copyPrompt(this)">📋 Copy</button></div><pre>{esc(info["video"]["prompt"])}</pre></div>')
                 lines.append('</div>')
 
                 # Alt Video
@@ -1622,7 +1626,7 @@ class ShotManager:
                 if info['alt_video'].get('caption'):
                     lines.append(f'<p class="sb-caption"><strong>Caption:</strong> {esc(info["alt_video"]["caption"])}</p>')
                 if info['alt_video'].get('prompt'):
-                    lines.append(f'<div class="sb-prompt"><strong>Prompt:</strong><pre>{esc(info["alt_video"]["prompt"])}</pre></div>')
+                    lines.append(f'<div class="sb-prompt"><div class="sb-prompt-header"><strong>Prompt:</strong><button class="sb-copy-btn" onclick="copyPrompt(this)">📋 Copy</button></div><pre>{esc(info["alt_video"]["prompt"])}</pre></div>')
                 lines.append('</div>')
 
                 lines.append('</div>')  # .sb-two-col
@@ -1644,7 +1648,7 @@ class ShotManager:
                     if info['audio'].get('caption'):
                         lines.append(f'<p class="sb-caption"><strong>Caption:</strong> {esc(info["audio"]["caption"])}</p>')
                     if info['audio'].get('prompt'):
-                        lines.append(f'<div class="sb-prompt"><strong>Prompt:</strong><pre>{esc(info["audio"]["prompt"])}</pre></div>')
+                        lines.append(f'<div class="sb-prompt"><div class="sb-prompt-header"><strong>Prompt:</strong><button class="sb-copy-btn" onclick="copyPrompt(this)">📋 Copy</button></div><pre>{esc(info["audio"]["prompt"])}</pre></div>')
                     lines.append('</div>')
                 lines.append('</div>')  # .sb-audio-row
                 lines.append('</div>')  # .sb-section
@@ -1669,6 +1673,22 @@ class ShotManager:
         lines.append('<footer class="sb-footer">')
         lines.append(f'<p>Generated by ShotBase v{app_version}</p>')
         lines.append('</footer>')
+
+        lines.append('</div>')  # .sb-content
+
+        # Copy prompt script
+        lines.append('<script>')
+        lines.append('function copyPrompt(btn) {')
+        lines.append('  var pre = btn.closest(".sb-prompt").querySelector("pre");')
+        lines.append('  navigator.clipboard.writeText(pre.textContent).then(function() {')
+        lines.append('    btn.textContent = "✓ Copied!";')
+        lines.append('    setTimeout(function() { btn.textContent = "📋 Copy"; }, 2000);')
+        lines.append('  }).catch(function() {')
+        lines.append('    btn.textContent = "Failed";')
+        lines.append('    setTimeout(function() { btn.textContent = "📋 Copy"; }, 2000);')
+        lines.append('  });')
+        lines.append('}')
+        lines.append('</script>')
 
         lines.append('</body>')
         lines.append('</html>')
@@ -1730,41 +1750,62 @@ body {
   color: var(--text-muted);
 }
 
-/* TOC nav */
-.sb-toc {
-  position: sticky;
+/* Sidebar TOC */
+.sb-sidebar {
+  position: fixed;
   top: 0;
-  z-index: 100;
+  left: 0;
+  width: 220px;
+  height: 100vh;
   background: var(--card-bg);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  z-index: 200;
+  padding: 16px 0;
+}
+
+.sb-sidebar-title {
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  padding: 0 16px 10px;
   border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-  white-space: nowrap;
-  -webkit-overflow-scrolling: touch;
+  margin-bottom: 8px;
 }
 
-.sb-toc-inner {
-  display: flex;
-  gap: 4px;
-  padding: 10px 16px;
-  max-width: 1200px;
-  margin: 0 auto;
+.sb-sidebar-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
-.sb-toc a {
-  display: inline-block;
-  padding: 4px 12px;
-  background: var(--bg);
-  border-radius: 4px;
+.sb-sidebar-list li {
+  padding: 0;
+}
+
+.sb-sidebar-list a {
+  display: block;
+  padding: 6px 16px;
   color: var(--text);
   text-decoration: none;
-  font-size: 0.82em;
+  font-size: 0.8em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition: background 0.15s;
+  border-left: 3px solid transparent;
 }
 
-.sb-toc a:hover {
-  background: var(--accent);
+.sb-sidebar-list a:hover {
+  background: rgba(91, 141, 239, 0.15);
+  border-left-color: var(--accent);
   color: #fff;
+}
+
+/* Content area (offset by sidebar) */
+.sb-content {
+  margin-left: 220px;
 }
 
 /* Main content */
@@ -1850,11 +1891,33 @@ body {
   margin-top: 8px;
 }
 
+.sb-prompt-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
 .sb-prompt strong {
   font-size: 0.85em;
   color: var(--text-muted);
-  display: block;
-  margin-bottom: 4px;
+}
+
+.sb-copy-btn {
+  background: var(--border);
+  color: var(--text-muted);
+  border: none;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 0.75em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.sb-copy-btn:hover {
+  background: var(--accent);
+  color: #fff;
 }
 
 .sb-prompt pre {
