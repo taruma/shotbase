@@ -111,7 +111,7 @@ function renderTOC() {
             ? `<span class="shot-display-name">${escapeHtml(shot.display_name)}</span> <span class="shot-code">(${shot.name})</span>`
             : shot.name;
         item.dataset.target = `shot-row-${shot.name}`;
-        item.addEventListener('click', () => scrollToShot(shot.name));
+        item.addEventListener('click', () => tocScrollToShot(shot.name));
         activeList.appendChild(item);
     });
 
@@ -142,7 +142,7 @@ function renderTOC() {
                 ? `<span class="shot-display-name">${escapeHtml(shot.display_name)}</span> <span class="shot-code">(${shot.name})</span>`
                 : shot.name;
             item.dataset.target = `shot-row-${shot.name}`;
-            item.addEventListener('click', () => scrollToShot(shot.name));
+            item.addEventListener('click', () => tocScrollToShot(shot.name));
             archivedList.appendChild(item);
         });
 
@@ -164,7 +164,7 @@ function filterTocItems(query) {
     });
 }
 
-function scrollToShot(shotName) {
+function tocScrollToShot(shotName) {
     const targetId = `shot-row-${shotName}`;
     const el = document.getElementById(targetId);
     if (el) {
