@@ -90,7 +90,8 @@ shotbuddy/
 │   ├── wip/               # Work-in-progress shot folders
 │   ├── latest_images/     # Latest image versions
 │   ├── latest_videos/     # Latest video versions (regular, alt)
-│   └── latest_audio/      # Latest audio versions
+│   └── latest_audio/      # Latest audio versions (created lazily by ShotManager.__init__)
+├── _legacy/               # Legacy data directory (created on project creation)
 ├── exports/               # Export output directory
 ├── run.py                 # Application entry point
 ├── shotbuddy.cfg          # Server configuration
@@ -256,7 +257,7 @@ shot_routes.py ──→ ShotManager._write_html_export() ──→ html_exporte
 - **Creating a shot**: creates `shots/wip/SH###/` with `images/`, `videos/`, `audio/` subdirs; creates shot order entry; updates project timestamp
 - **Uploading an asset**: saves to `wip/SH###/images/`, `videos/`, or `audio/` with version suffix; copies to `latest_images/`, `latest_videos/`, or `latest_audio/`; lazy thumbnail URL computed (generated on first request for images/videos); updates version marker
 - **Promoting an asset**: copies WIP version → latest dir; updates `.version` marker; thumbnail regenerated on next request
-- **Exporting assets**: copies latest promoted files to `exports/<name>/` (images/ videos/ audio/ subdirs); generates `metadata.md` (Markdown) or `export_summary.html` (self-contained HTML gallery with sidebar TOC, asset embeds, prompts, copy buttons) depending on `export_format`; HTML export delegates to `html_exporter.write_html_export()`
+- **Exporting assets**: copies latest promoted files to `exports/<name>/` (images/ videos/ audio/ subdirs); generates `export_summary.md` (Markdown) or `export_summary.html` (self-contained HTML gallery with sidebar TOC, asset embeds, prompts, copy buttons) depending on `export_format`; HTML export delegates to `html_exporter.write_html_export()`
 - **Archiving a shot**: toggles entry in `.archived_shots.json`
 
 ---
@@ -305,9 +306,9 @@ Every project directory contains these files (under `shots/`):
 
 ### `shots/wip/SH###/captions.json`
 ```json
-{"first_image": "Opening frame caption", "last_image": "", "video": "Main shot clip", "alt_video": ""}
+{"first_image": "Opening frame caption", "last_image": "", "video": "Main shot clip", "alt_video": "", "audio": ""}
 ```
-- Keys: `first_image`, `last_image`, `video`, `alt_video`
+- Keys: `first_image`, `last_image`, `video`, `alt_video`, `audio`
 
 ### `shots/wip/SH###/notes.txt`
 - Plain text file, read/written as-is
@@ -340,7 +341,7 @@ Every project directory contains these files (under `shots/`):
 - Version markers: `SH###_audio.version`
 - Each `.version` file contains a single integer
 
-### `exports/<name>/metadata.md`
+### `exports/<name>/export_summary.md`
 - Markdown export (generated when `export_format: "md"` or default)
 - Contains tables of first/last frame data, video data, alt video data, audio data, and shot notes
 
@@ -428,7 +429,7 @@ Every project directory contains these files (under `shots/`):
 
 ### JavaScript Architecture
 Key patterns:
-- Theme toggle: persists preference in `localStorage` under `shotbuddy-theme`, toggles `.light` class on `<body>` (migrated from `body.light-theme` in v4.2.0)
+- Theme toggle: persists preference in `localStorage` under `theme`, toggles `.light` class on `<body>` (migrated from `body.light-theme` in v4.2.0)
 - Project state: uses `sessionStorage` to track whether user is in a project
 - Event delegation: uses `data-*` attributes instead of inline `onclick` handlers
 - TOC (Table of Contents): side panel rendered dynamically, supports filter/search, persists open/close state, collapsible archived section. All TOC logic lives in `toc.js` (extracted from `main.js` in v4.2.0); TOC scroll uses `tocScrollToShot()` to avoid collision with search-modal's `scrollToShot()`
@@ -453,7 +454,7 @@ CSS is split into modular files, loaded in the order listed in `index.html` (see
 
 ### Theme System
 - **Class**: Theme is controlled by toggling the `.light` class on `<body>` (migrated from `body.light-theme` in v4.2.0)
-- **Persistence**: User preference stored in `localStorage` under key `shotbuddy-theme`
+- **Persistence**: User preference stored in `localStorage` under key `theme`
 - **Toggle**: Theme button in header calls `document.body.classList.toggle('light')`
 - **Overrides**: Global light theme overrides live in `styles.css`. Individual modules (`search-modal.css`, `modals.css`, `shot-grid.css`, `layout.css`) contain their own `.light`-prefixed blocks for component-specific light styling
 - **Adding new components**: Add dark theme styles as defaults, then add `.light`-prefixed overrides in the same CSS file (or in `styles.css` for cross-cutting concerns)
