@@ -1,6 +1,6 @@
 # Changelog
 
-## v4.2.0 (July 16, 2026) - by Taruma Sakti
+## v4.2.0 (Unreleased) - by Taruma Sakti
 
 This minor release introduces a self-contained HTML gallery export with sidebar navigation, copy-to-clipboard buttons, Markdown-rendered project notes, styled tag pills, and a meta card. The CSS codebase has been modularized into five focused files, and the light-theme class has been migrated from `body.light-theme` to `.light`. The backend service layer has been decomposed from a monolithic `shot_manager.py` into a facade orchestrating five sub-service modules. Several UI polish items and fixes round out the release.
 
@@ -34,6 +34,10 @@ This minor release introduces a self-contained HTML gallery export with sidebar 
   - `export_service.py` — `ExportService` for asset export and MD/HTML generation
   The `ShotManager` class now serves as a facade with lazy-initialized sub-service properties, preserving full backward compatibility with all route handlers. Each extracted module follows the Single Responsibility Principle with focused public APIs.
 - **Modular CSS Architecture**: The monolithic CSS has been split into five focused modules — `core.css` (reset, buttons, forms), `layout.css` (header, TOC, setup, footer), `shot-grid.css` (grid, rows, thumbnails, drag-and-drop), `modals.css` (all modal styles), and `main.css` (remaining primary styles). Light theme overrides were consolidated in `styles.css`. As part of this refactor, the theme class was migrated from `body.light-theme` to `.light` in `search-modal.css`, and missing focus styles (`.notes-input`, `.asset-caption-input`, `.toc-filter`) and hover styles (`.drop-zone.empty`) were added to the light theme.
+- **Modular JavaScript Architecture**: The monolithic `main.js` (2,595 lines) has been split into two focused modules:
+  - `main.js` (1,759 lines) — app core: state management, project dialogs, theme, TOC, shot grid rendering, drag-and-drop uploads, shot CRUD, tooltips, notifications
+  - `modals.js` (873 lines) — all modal dialogs and media viewers: prompt modal, reorder modal, project info modal, export modal, video/image/audio playback with keyboard navigation, folder operations
+  All functions were moved verbatim with zero logic changes. Script load order in `index.html`: `main.js` → `modals.js` → `visual-reorder.js` → `search-modal.js` → `modal-behavior.js`.
 
 ### Documentation
 - **AGENTS.md Updated**: Documented the new HTML gallery export feature (endpoint parameter, `html_exporter.py` module, side effects), the modular CSS file structure (file responsibilities, line counts, load order), the decomposed Python service architecture (facade pattern, sub-service responsibilities, dependency diagram), and bumped the project version to 4.2.0.
@@ -41,7 +45,7 @@ This minor release introduces a self-contained HTML gallery export with sidebar 
 ### AI Development Attribution
 This release was developed with AI assistance using Deepseek V4 pro with Cline in Plan and Act mode. All generated changes were manually reviewed, tested, and refined by the maintainer, Taruma Sakti, to ensure quality and alignment with project goals.
 
-This version enhances export capabilities with a polished HTML gallery and improves both CSS and Python maintainability through modularization and service decomposition.
+This version enhances export capabilities with a polished HTML gallery and improves CSS, JavaScript, and Python maintainability through modularization and service decomposition.
 
 ## v4.1.0 (July 4, 2026) - by Taruma Sakti
 
