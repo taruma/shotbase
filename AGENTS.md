@@ -84,7 +84,7 @@ shotbuddy/
 │   ├── config/            # Configuration (constants.py)
 │   └── static/            # Static assets
 │       ├── css/           # core.css, layout.css, shot-grid.css, modals.css, main.css, styles.css, visual-reorder.css, search-modal.css
-│       ├── js/            # main.js, modals.js, search-modal.js, visual-reorder.js, modal-behavior.js
+│       ├── js/            # main.js, toc.js, modals.js, search-modal.js, visual-reorder.js, modal-behavior.js
 │       └── icons/         # Favicons, PWA manifest, folder icon
 ├── shots/                  # Project data directory (created per project)
 │   ├── wip/               # Work-in-progress shot folders
@@ -419,7 +419,8 @@ Every project directory contains these files (under `shots/`):
   - `app/static/css/visual-reorder.css` — visual reorder grid styles
   - `app/static/css/search-modal.css` — search modal layout, filter pills, snippet styling, keyboard focus
 - **JavaScript**: 
-  - `app/static/js/main.js` — SPA core: app state, project dialogs, theme, TOC, shot grid rendering, drag-and-drop uploads, shot CRUD, tooltips, notifications
+  - `app/static/js/main.js` — SPA core: app state, project dialogs, theme, shot grid rendering, drag-and-drop uploads, shot CRUD, tooltips, notifications
+  - `app/static/js/toc.js` — Table of Shots panel: UI creation, positioning (docked/drawer), toggle, rendering, filtering, scroll-to-shot, IntersectionObserver, archived section collapse
   - `app/static/js/modals.js` — all modal dialogs and media viewers: prompt modal, reorder modal, project info modal, export modal, video/image/audio playback with keyboard navigation, folder operations
   - `app/static/js/search-modal.js` — client-side search with in-memory index, multi-token matching, filter pills, keyboard nav
   - `app/static/js/visual-reorder.js` — drag-and-drop shot sorting grid, thumbnail switching, preview/edit modes
@@ -430,7 +431,7 @@ Key patterns:
 - Theme toggle: persists preference in `localStorage` under `shotbuddy-theme`, toggles `.light` class on `<body>` (migrated from `body.light-theme` in v4.2.0)
 - Project state: uses `sessionStorage` to track whether user is in a project
 - Event delegation: uses `data-*` attributes instead of inline `onclick` handlers
-- TOC (Table of Contents): side panel rendered dynamically, supports filter/search, persists open/close state, collapsible archived section
+- TOC (Table of Contents): side panel rendered dynamically, supports filter/search, persists open/close state, collapsible archived section. All TOC logic lives in `toc.js` (extracted from `main.js` in v4.2.0); TOC scroll uses `tocScrollToShot()` to avoid collision with search-modal's `scrollToShot()`
 - File upload: uses `FormData` with `file`, `shot_name`, `file_type` fields; shows loading states
 - Cache busting: appends `?t=timestamp` to media URLs
 - Modals: image/video/audio viewers with keyboard arrow navigation; export modal with media type checkboxes and two-row button layout (utility row + centered actions); search modal with Ctrl+Shift+F shortcut; visual reorder modal with SortableJS. All modal logic lives in `modals.js` (extracted from `main.js` in v4.2.0)
